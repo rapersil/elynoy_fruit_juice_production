@@ -1,12 +1,14 @@
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction, models
+from django.db.models import Sum
 from django.forms import inlineformset_factory
 from django.utils import timezone
-from ..models import Sale, SaleItem, Customer, Product
+from ..models import Sale, SaleItem, Customer, Product, Payment
 from django import forms
-from ..forms import SaleItemForm,SaleForm
+from ..forms import SaleItemForm, SaleForm, PaymentForm
 
 
 @login_required
@@ -397,3 +399,172 @@ def top_customers_analysis(request):
     }
     
     return render(request, 'juice_app/sale/sale_top_customers_analysis.html', context)
+
+
+# Sale payments views 
+
+@login_required
+def payment_list(request, sale_id):
+    """Display list of payments for a sale."""
+    sale = get_object_or_404(Sale, id=sale_id)
+    payments = sale.payments.all().order_by('-payment_date')
+    
+    # Calculate total paid and balance
+    total_paid = payments.aggregate(Sum('amount'))['amount__sum'] or 0
+    balance = sale.total_amount - total_paid
+    
+    context = {
+        'sale': sale,
+        'payments': payments,
+        'total_paid': total_paid,
+        'balance': balance,
+    }
+    
+    return render(request, 'juice_app/sale/sale_payment_list.html', context)
+
+@login_required
+def payment_add(request, sale_id):
+    """Add a new payment for a sale."""
+    sale = get_object_or_404(Sale, id=sale_id)
+    
+    # Calculate remaining balance
+    total_paid = sale.payments.aggregate(Sum('amount'))['amount__sum'] or 0
+    balance = sale.total_amount - total_paid
+    
+    if request.method == 'POST':
+        form = PaymentForm(request.POST)
+        if form.is_valid():
+            payment = form.save(commit=False)
+            payment.sale = sale
+            payment.received_by = request.user
+            
+            # Validate that payment amount doesn't exceed balance
+            if payment.amount > balance:
+                form.add_error('amount', f'Payment amount exceeds remaining balance (GHS{balance}).')
+            else:
+                payment.save()
+                messages.success(request, f'Payment of GHS{payment.amount} recorded successfully.')
+                return redirect('payment_list', sale_id=sale.id)
+    else:
+        # Pre-fill the amount with the remaining balance
+        print('not saved')
+        form = PaymentForm(initial={'amount': balance, 'payment_date': timezone.now().date()})
+        
+    
+    context = {
+        'form': form,
+        'sale': sale,
+        'balance': balance,
+    }
+    
+    return render(request, 'juice_app/sale/sale_payment_form.html', context)
+
+
+
+@login_required
+def payment_detail(request, sale_id, payment_id):
+    """Display payment details."""
+    sale = get_object_or_404(Sale, id=sale_id)
+    payment = get_object_or_404(Payment, id=payment_id, sale=sale)
+    
+    context = {
+        'sale': sale,
+        'payment': payment,
+    }
+    
+    return render(request, 'juice_app/sale/sale_payment_detail.html', context)
+
+@login_required
+def payment_edit(request, sale_id, payment_id):
+    """Edit an existing payment."""
+    sale = get_object_or_404(Sale, id=sale_id)
+    payment = get_object_or_404(Payment, id=payment_id, sale=sale)
+    
+    # Calculate balance excluding this payment
+    total_paid = sale.payments.exclude(id=payment_id).aggregate(Sum('amount'))['amount__sum'] or 0
+    balance = sale.total_amount - total_paid
+    
+    if request.method == 'POST':
+        form = PaymentForm(request.POST, instance=payment)
+        if form.is_valid():
+            edited_payment = form.save(commit=False)
+            
+            # Validate that payment amount doesn't exceed balance
+            if edited_payment.amount > balance:
+                form.add_error('amount', f'Payment amount exceeds remaining balance (GHS{balance}).')
+            else:
+                edited_payment.save()
+                
+                # Update sale payment status
+                update_sale_payment_status(sale)
+                
+                messages.success(request, f'Payment updated successfully.')
+                return redirect('payment_list', sale_id=sale.id)
+    else:
+        form = PaymentForm(instance=payment)
+    
+    context = {
+        'form': form,
+        'sale': sale,
+        'payment': payment,
+        'balance': balance + payment.amount,  # Add current payment amount to available balance
+    }
+    
+    return render(request, 'juice_app/sale/sale_payment_edit.html', context)
+
+@login_required
+def payment_delete(request, sale_id, payment_id):
+    """Delete a payment."""
+    sale = get_object_or_404(Sale, id=sale_id)
+    payment = get_object_or_404(Payment, id=payment_id, sale=sale)
+    
+    if request.method == 'POST':
+        payment.delete()
+        
+        # Update sale payment status
+        update_sale_payment_status(sale)
+        
+        messages.success(request, f'Payment deleted successfully.')
+        return redirect('payment_list', sale_id=sale.id)
+    
+    context = {
+        'sale': sale,
+        'payment': payment,
+    }
+    
+    return render(request, 'juice_app/sale/sale_payment_delete.html', context)
+
+def update_sale_payment_status(sale):
+    """Update the payment status of a sale based on payments."""
+    total_paid = sale.payments.aggregate(Sum('amount'))['amount__sum'] or 0
+    
+    if total_paid >= sale.total_amount:
+        sale.payment_status = 'paid'
+    elif total_paid > 0:
+        sale.payment_status = 'partial'
+    else:
+        sale.payment_status = 'pending'
+    
+    sale.save()
+
+
+
+from juice_app.utils.pdf_generator import generate_sale_receipt_pdf
+
+@login_required
+def sale_receipt_pdf(request, sale_id):
+    """Generate and serve a PDF receipt for a sale."""
+    sale = get_object_or_404(Sale, id=sale_id)
+    
+    # Get all payments for this sale
+    payments = sale.payments.all().order_by('-payment_date')
+    
+    # Generate the PDF
+    pdf = generate_sale_receipt_pdf(sale, payments)
+    
+    # Create the HTTP response
+    response = HttpResponse(pdf, content_type='application/pdf')
+    filename = f"Receipt_{sale.invoice_number}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response

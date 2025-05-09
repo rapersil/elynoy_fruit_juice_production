@@ -52,9 +52,16 @@
         <i class="material-icons align-middle">file_download</i> Export
       </button>
       <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="exportDropdown">
-        <li><a class="dropdown-item" href="#"><i class="material-icons align-middle me-2" style="font-size: 16px;">description</i> PDF</a></li>
-        <li><a class="dropdown-item" href="#"><i class="material-icons align-middle me-2" style="font-size: 16px;">table_chart</i> Excel</a></li>
-        <li><a class="dropdown-item" href="#"><i class="material-icons align-middle me-2" style="font-size: 16px;">print</i> Print</a></li>
+        <li>
+          <a class="dropdown-item" href="{% url 'sales_report_pdf' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">
+            <i class="material-icons align-middle me-2" style="font-size: 16px;">picture_as_pdf</i> PDF
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="{% url 'sales_report_excel' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">
+            <i class="material-icons align-middle me-2" style="font-size: 16px;">table_chart</i> Excel
+          </a>
+        </li>
       </ul>
     </div>
     <a href="{% url 'dashboard' %}" class="btn btn-outline-primary">
@@ -301,7 +308,7 @@
               {% for customer in top_customers %}
               <tr>
                 <td>
-                  <a href="{% url 'customer_detail' customer.id %}">{{ customer.name }}</a>
+                    <a href="{% url 'customer_detail' customer.customer__id %}">{{ customer.customer__name }}</a>
                 </td>
                 <td>{{ customer.order_count }}</td>
                 <td>GHS{{ customer.total_spend|floatformat:2 }}</td>

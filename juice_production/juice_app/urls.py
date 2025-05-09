@@ -77,6 +77,16 @@ urlpatterns = [
     path('sales/<int:sale_id>/receipt/', sale_receipt, name='sale_receipt'),
     path('sales/dashboard/', sales_dashboard, name='sales_dashboard'),
     path('sales/top-customers/', top_customers_analysis, name='top_customers_analysis'),
+    # Payments
+    path('sales/<int:sale_id>/payments/', payment_list, name='payment_list'),
+    path('sales/<int:sale_id>/payments/add/', payment_add, name='payment_add'),
+    path('sales/<int:sale_id>/payments/', payment_list, name='payment_list'),
+    path('sales/<int:sale_id>/payments/add/', payment_add, name='payment_add'),
+    path('sales/<int:sale_id>/payments/<int:payment_id>/', payment_detail, name='payment_detail'),
+    path('sales/<int:sale_id>/payments/<int:payment_id>/edit/', payment_edit, name='payment_edit'),
+    path('sales/<int:sale_id>/payments/<int:payment_id>/delete/', payment_delete, name='payment_delete'),
+    path('sales/<int:sale_id>/receipt/pdf/', sale_receipt_pdf, name='sale_receipt_pdf'),
+    path('reports/sales/pdf/', sales_report_pdf, name='sales_report_pdf'),
     
     # # Users
     path('profile/', user_profile, name='user_profile'),
@@ -86,6 +96,7 @@ urlpatterns = [
     path('reports/inventory/', inventory_report, name='inventory_report'),
     path('reports/production/', production_report, name='production_report'),
     path('reports/sales/', sales_report, name='sales_report'),
+    path('reports/sales/excel/', sales_report_excel, name='sales_report_excel'),
     
     # # API endpoints for AJAX calls
     path('api/product/<int:product_id>/recipe/', api_product_recipe, name='api_product_recipe'),

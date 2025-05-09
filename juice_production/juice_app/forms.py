@@ -1,5 +1,5 @@
 from django import forms
-from .models import ProductionBatch, MaterialUsage, Product, PurchaseOrder, PurchaseOrderItem, Sale, SaleItem, UserProfile, RawMaterial, Customer, Bottle,Recipe
+from .models import ProductionBatch, MaterialUsage, Product, PurchaseOrder, PurchaseOrderItem, Sale, SaleItem, UserProfile, RawMaterial, Customer, Bottle, Recipe, Payment
 from django.contrib.auth.forms import UserCreationForm
 from .validators import validate_phone_number
 from django.core.exceptions import ValidationError
@@ -262,3 +262,15 @@ class ReceiveItemForm(forms.Form):
         max_digits=10, decimal_places=2, min_value=0,
         label="Quantity to Receive"
     )
+
+
+class PaymentForm(forms.ModelForm):
+    class Meta:
+        model = Payment
+        fields = ['amount', 'payment_method', 'payment_date', 'notes']
+        widgets = {
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'payment_method': forms.Select(attrs={'class': 'form-control'}),
+            'payment_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }

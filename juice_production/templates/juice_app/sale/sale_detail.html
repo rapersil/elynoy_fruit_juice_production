@@ -24,9 +24,16 @@
       <i class="material-icons">check_circle</i> Confirm
     </a>
     {% endif %}
+    <!-- Add this in the button group of sale_detail.html -->
+    <a href="{% url 'payment_list' sale.id %}" class="btn btn-success">
+      <i class="material-icons">payments</i> Payments
+    </a>
     
     <a href="{% url 'sale_receipt' sale.id %}" class="btn btn-outline-secondary">
       <i class="material-icons">print</i> Print
+    </a>
+    <a href="{% url 'sale_receipt_pdf' sale.id %}" class="btn btn-outline-secondary">
+      <i class="material-icons">picture_as_pdf</i> PDF Receipt
     </a>
   </div>
 </div>

@@ -3,7 +3,10 @@ from .validators import *
 from django.core.validators import MinValueValidator
 from django.contrib.auth.models import User
 from django.utils import timezone
-
+from django.db.models import Sum
+import uuid
+from django.db import models
+from .validators import validate_positive
 
 class UserProfile(models.Model):
     """
@@ -790,3 +793,85 @@ class SaleItem(models.Model):
         # Update the sale total
         self.sale.save()
 
+
+
+
+class Payment(models.Model):
+    """Model to track payments for sales."""
+    PAYMENT_METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('credit_card', 'Credit Card'),
+        ('mobile_money', 'Mobile Money'),
+        ('cheque', 'Cheque'),
+        ('other', 'Other'),
+    ]
+    
+    sale = models.ForeignKey(
+        Sale, 
+        on_delete=models.CASCADE,
+        related_name='payments',
+        help_text="Sale this payment applies to"
+    )
+    amount = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        validators=[validate_positive],
+        help_text="Payment amount"
+    )
+    payment_date = models.DateField(
+        default=timezone.now,
+        help_text="Date of payment"
+    )
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_METHOD_CHOICES,
+        default='cash',
+        help_text="Method of payment"
+    )
+    reference_number = models.CharField(
+        max_length=50,
+        unique=True,
+        editable=False,
+        help_text="System-generated reference number for this payment"
+    )
+    notes = models.TextField(
+        blank=True,
+        help_text="Additional notes about this payment"
+    )
+    received_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, blank=True,
+        related_name='payments_received',
+        help_text="User who recorded this payment"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Payment of GHS{self.amount} for {self.sale.invoice_number}"
+    
+    def save(self, *args, **kwargs):
+        # Generate unique reference number if not already set
+        if not self.reference_number:
+            # Generate a unique reference using date and UUID
+            date_str = timezone.now().strftime('%Y%m%d')
+            unique_id = str(uuid.uuid4())[:8].upper()
+            self.reference_number = f"PAY-{date_str}-{unique_id}"
+        
+        # Create the payment
+        super().save(*args, **kwargs)
+        
+        # Update the sale's payment status
+        sale = self.sale
+        total_paid = Payment.objects.filter(sale=sale).aggregate(Sum('amount'))['amount__sum'] or 0
+        
+        if total_paid >= sale.total_amount:
+            sale.payment_status = 'paid'
+        elif total_paid > 0:
+            sale.payment_status = 'partial'
+        else:
+            sale.payment_status = 'pending'
+            
+        sale.save()
