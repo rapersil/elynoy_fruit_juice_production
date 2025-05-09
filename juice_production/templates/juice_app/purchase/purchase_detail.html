@@ -1,0 +1,255 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}PO {{ po.po_number }} | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1>Purchase Order: {{ po.po_number }}</h1>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'purchase_order_list' %}">Purchase Orders</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ po.po_number }}</li>
+      </ol>
+    </nav>
+  </div>
+  <div>
+    {% if po.status == 'draft' %}
+    <a href="{% url 'purchase_order_edit' po.id %}" class="btn btn-primary">
+      <i class="material-icons">edit</i> Edit
+    </a>
+    {% elif po.status == 'submitted' or po.status == 'partial' %}
+    <a href="{% url 'purchase_order_receive' po.id %}" class="btn btn-success">
+      <i class="material-icons">inventory</i> Receive Items
+    </a>
+    {% endif %}
+    
+    <a href="#" class="btn btn-outline-secondary">
+      <i class="material-icons">print</i> Print
+    </a>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-5">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Purchase Order Details</h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="d-flex align-items-center">
+            <div style="width: 60px; height: 60px; border-radius: 50%; background-color: 
+              {% if po.status == 'received' %}var(--success)
+              {% elif po.status == 'partial' %}var(--warning)
+              {% elif po.status == 'submitted' %}var(--info)
+              {% elif po.status == 'draft' %}var(--secondary)
+              {% else %}var(--danger){% endif %};
+              display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+              <i class="material-icons" style="font-size: 32px; color: white;">
+                {% if po.status == 'received' %}check_circle
+                {% elif po.status == 'partial' %}hourglass_top
+                {% elif po.status == 'submitted' %}local_shipping
+                {% elif po.status == 'draft' %}edit
+                {% else %}cancel{% endif %}
+              </i>
+            </div>
+            <div>
+              <h4 class="mb-1">{{ po.supplier.name }}</h4>
+              <span class="badge 
+                {% if po.status == 'received' %}bg-success
+                {% elif po.status == 'partial' %}bg-warning
+                {% elif po.status == 'submitted' %}bg-primary
+                {% elif po.status == 'draft' %}bg-secondary
+                {% else %}bg-danger{% endif %}">
+                {{ po.status|title }}
+              </span>
+              <span class="badge 
+                {% if po.payment_status == 'paid' %}bg-success
+                {% elif po.payment_status == 'partial' %}bg-info
+                {% elif po.payment_status == 'pending' %}bg-warning
+                {% else %}bg-danger{% endif %}">
+                Payment: {{ po.payment_status|title }}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <table class="table">
+          <tr>
+            <th style="width: 40%;">PO Number</th>
+            <td>{{ po.po_number }}</td>
+          </tr>
+          <tr>
+            <th>Supplier</th>
+            <td>{{ po.supplier.name }}</td>
+          </tr>
+          <tr>
+            <th>Contact Person</th>
+            <td>{{ po.supplier.contact_person }}</td>
+          </tr>
+          <tr>
+            <th>Phone</th>
+            <td>{{ po.supplier.phone }}</td>
+          </tr>
+          <tr>
+            <th>Email</th>
+            <td>{{ po.supplier.email }}</td>
+          </tr>
+          <tr>
+            <th>Order Date</th>
+            <td>{{ po.order_date }}</td>
+          </tr>
+          <tr>
+            <th>Expected Delivery</th>
+            <td>{{ po.expected_delivery_date|default:"Not specified" }}</td>
+          </tr>
+          <tr>
+            <th>Total Amount</th>
+            <td>GHS{{ po.total_amount|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <th>Created By</th>
+            <td>{{ po.created_by|default:"System" }}</td>
+          </tr>
+        </table>
+        
+        {% if po.notes %}
+        <div class="mt-3">
+          <h6>Notes:</h6>
+          <p>{{ po.notes }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Supplier Information</h5>
+      </div>
+      <div class="card-body">
+        <address>
+          <strong>{{ po.supplier.name }}</strong><br>
+          {{ po.supplier.address|linebreaksbr }}
+        </address>
+        
+        <div class="mt-3">
+          <a href="{% url 'customer_detail' po.supplier.id %}" class="btn btn-sm btn-outline-primary">
+            <i class="material-icons align-text-bottom" style="font-size: 16px;">business</i>
+            View Supplier Profile
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-7">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Order Items</h5>
+        <span class="badge bg-primary">{{ items|length }} Items</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Raw Material</th>
+                <th>Quantity Ordered</th>
+                <th>Quantity Received</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in items %}
+              <tr>
+                <td>
+                  <a href="{% url 'raw_material_detail' item.raw_material.id %}">
+                    {{ item.raw_material.name }}
+                  </a>
+                  <br>
+                  <small class="text-muted">{{ item.raw_material.unit }}</small>
+                </td>
+                <td>{{ item.quantity_ordered }}</td>
+                <td>
+                  {% if item.quantity_received > 0 %}
+                  <div class="d-flex align-items-center">
+                    <div class="me-2">
+                      {{ item.quantity_received }}
+                    </div>
+                    <div class="progress" style="width: 60px; height: 8px;">
+                      <div class="progress-bar bg-success" role="progressbar" 
+                           style="width: {{ item.quantity_received|floatformat:0|stringformat:"i"|add:"0"|add:".0"|stringformat:"f"|floatformat:1 }}%;" 
+                           aria-valuenow="{{ item.quantity_received|floatformat:1 }}" 
+                           aria-valuemin="0" 
+                           aria-valuemax="{{ item.quantity_ordered|floatformat:1 }}">
+                      </div>
+                    </div>
+                  </div>
+                  {% else %}
+                  <span class="text-muted">0</span>
+                  {% endif %}
+                </td>
+                <td>GHS{{ item.unit_price|floatformat:2 }}</td>
+                <td>GHS{{ item.total_price|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot class="bg-light">
+              <tr>
+                <th colspan="4" class="text-end">Total:</th>
+                <th>GHS{{ po.total_amount|floatformat:2 }}</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Receipt History</h5>
+      </div>
+      <div class="card-body p-0">
+        {% if receipt_history %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Material</th>
+                <th>Quantity Received</th>
+                <th>Received By</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for receipt in receipt_history %}
+              <tr>
+                <td>{{ receipt.date }}</td>
+                <td>{{ receipt.material.name }}</td>
+                <td>{{ receipt.quantity }}</td>
+                <td>{{ receipt.user|default:"System" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No receipt history available</p>
+          {% if po.status == 'submitted' or po.status == 'partial' %}
+          <a href="{% url 'purchase_order_receive' po.id %}" class="btn btn-sm btn-success">
+            <i class="material-icons align-text-bottom">inventory</i>
+            Receive Items
+          </a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

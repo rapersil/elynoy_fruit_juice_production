@@ -1,0 +1,235 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}
+  {% if customer %}Edit {{ customer.name }}{% else %}New Customer{% endif %} | Fruit Juice Production
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>{% if customer %}Edit Customer{% else %}New Customer{% endif %}</h1>
+  <a href="{% url 'customer_list' %}" class="btn btn-outline-secondary">
+    <i class="material-icons">arrow_back</i> Back to List
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">{% if customer %}Edit {{ customer.name }}{% else %}Create New Customer{% endif %}</h5>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      
+      <h5 class="mb-3">Basic Information</h5>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.name.id_for_label }}">Company/Customer Name <span class="text-danger">*</span></label>
+            {{ form.name }}
+            {% if form.name.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.name.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.contact_person.id_for_label }}">Contact Person</label>
+            {{ form.contact_person }}
+            {% if form.contact_person.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.contact_person.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.phone.id_for_label }}">Phone <span class="text-danger">*</span></label>
+            {{ form.phone }}
+            {% if form.phone.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.phone.errors }}
+            </div>
+            {% endif %}
+            <small class="form-text text-muted">Format: +1XXXXXXXXXX or similar international format</small>
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.email.id_for_label }}">Email <span class="text-danger">*</span></label>
+            {{ form.email }}
+            {% if form.email.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.email.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group mb-3">
+        <label for="{{ form.address.id_for_label }}">Address <span class="text-danger">*</span></label>
+        {{ form.address }}
+        {% if form.address.errors %}
+        <div class="invalid-feedback d-block">
+          {{ form.address.errors }}
+        </div>
+        {% endif %}
+      </div>
+      
+      <hr class="my-4">
+      
+      <h5 class="mb-3">Customer Type and Settings</h5>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <div class="form-check">
+              {{ form.is_buyer }}
+              <label class="form-check-label" for="{{ form.is_buyer.id_for_label }}">
+                This customer buys our products
+              </label>
+              {% if form.is_buyer.errors %}
+              <div class="invalid-feedback d-block">
+                {{ form.is_buyer.errors }}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <div class="form-check">
+              {{ form.is_supplier }}
+              <label class="form-check-label" for="{{ form.is_supplier.id_for_label }}">
+                This customer is also a supplier
+              </label>
+              {% if form.is_supplier.errors %}
+              <div class="invalid-feedback d-block">
+                {{ form.is_supplier.errors }}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row buyer-fields">
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.credit_limit.id_for_label }}">Credit Limit</label>
+            <div class="input-group">
+              <span class="input-group-text">GHS</span>
+              {{ form.credit_limit }}
+            </div>
+            {% if form.credit_limit.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.credit_limit.errors }}
+            </div>
+            {% endif %}
+            <small class="form-text text-muted">Maximum credit extended to this customer</small>
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.payment_terms.id_for_label }}">Payment Terms</label>
+            {{ form.payment_terms }}
+            {% if form.payment_terms.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.payment_terms.errors }}
+            </div>
+            {% endif %}
+            <small class="form-text text-muted">E.g., Net 30, COD, etc.</small>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group mb-3">
+        <div class="form-check">
+          {{ form.is_active }}
+          <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+            Active
+          </label>
+          {% if form.is_active.errors %}
+          <div class="invalid-feedback d-block">
+            {{ form.is_active.errors }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="form-group mb-3">
+        <label for="{{ form.notes.id_for_label }}">Notes</label>
+        {{ form.notes }}
+        {% if form.notes.errors %}
+        <div class="invalid-feedback d-block">
+          {{ form.notes.errors }}
+        </div>
+        {% endif %}
+      </div>
+      
+      <div class="d-flex justify-content-end mt-4">
+        <a href="{% url 'customer_list' %}" class="btn btn-outline-secondary me-2">
+          Cancel
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="material-icons">save</i>
+          {% if customer %}Update{% else %}Create{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap classes to form inputs
+    document.querySelectorAll('input[type="text"], input[type="number"], input[type="email"], textarea, select').forEach(function(el) {
+      el.classList.add('form-control');
+    });
+    
+    document.querySelectorAll('input[type="checkbox"]').forEach(function(el) {
+      el.classList.add('form-check-input');
+    });
+    
+    // Toggle buyer-specific fields based on is_buyer checkbox
+    const isBuyerCheckbox = document.getElementById('{{ form.is_buyer.id_for_label }}');
+    const buyerFields = document.querySelector('.buyer-fields');
+    
+    function toggleBuyerFields() {
+      if (isBuyerCheckbox.checked) {
+        buyerFields.style.display = 'flex';
+      } else {
+        buyerFields.style.display = 'none';
+      }
+    }
+    
+    if (isBuyerCheckbox && buyerFields) {
+      toggleBuyerFields(); // Initial state
+      isBuyerCheckbox.addEventListener('change', toggleBuyerFields);
+    }
+    
+    // Initialize from URL parameters if this is a new form
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('is_supplier') && urlParams.get('is_supplier').toLowerCase() === 'true') {
+      const isSupplierCheckbox = document.getElementById('{{ form.is_supplier.id_for_label }}');
+      if (isSupplierCheckbox) {
+        isSupplierCheckbox.checked = true;
+      }
+    }
+  });
+</script>
+{% endblock %}

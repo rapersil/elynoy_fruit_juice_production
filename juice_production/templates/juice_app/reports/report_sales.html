@@ -1,0 +1,476 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}Sales Report | Fruit Juice Production{% endblock %}
+
+{% block extra_css %}
+<style>
+  .date-range-selector {
+    background-color: var(--color-50);
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .metric-card {
+    transition: all 0.2s ease;
+  }
+  
+  .metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .trend-indicator {
+    font-size: 14px;
+    margin-left: 8px;
+  }
+  
+  .trend-up {
+    color: var(--success);
+  }
+  
+  .trend-down {
+    color: var(--danger);
+  }
+  
+  .trend-neutral {
+    color: var(--secondary);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1>Sales Report</h1>
+    <p class="text-muted">Analyze sales performance and revenue trends</p>
+  </div>
+  <div>
+    <div class="dropdown d-inline-block me-2">
+      <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="material-icons align-middle">file_download</i> Export
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="exportDropdown">
+        <li><a class="dropdown-item" href="#"><i class="material-icons align-middle me-2" style="font-size: 16px;">description</i> PDF</a></li>
+        <li><a class="dropdown-item" href="#"><i class="material-icons align-middle me-2" style="font-size: 16px;">table_chart</i> Excel</a></li>
+        <li><a class="dropdown-item" href="#"><i class="material-icons align-middle me-2" style="font-size: 16px;">print</i> Print</a></li>
+      </ul>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-primary">
+      <i class="material-icons align-middle">dashboard</i> Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="date-range-selector">
+  <form method="get" class="mb-0">
+    <div class="row align-items-end">
+      <div class="col-md-3">
+        <div class="form-group mb-md-0 mb-3">
+          <label for="start_date" class="form-label">Start Date</label>
+          <input type="date" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" class="form-control">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="form-group mb-md-0 mb-3">
+          <label for="end_date" class="form-label">End Date</label>
+          <input type="date" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" class="form-control">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="form-group mb-md-0 mb-3">
+          <label for="view_type" class="form-label">View By</label>
+          <select id="view_type" name="view" class="form-select">
+            <option value="daily" {% if view_type == 'daily' %}selected{% endif %}>Daily</option>
+            <option value="weekly" {% if view_type == 'weekly' %}selected{% endif %}>Weekly</option>
+            <option value="monthly" {% if view_type == 'monthly' %}selected{% endif %}>Monthly</option>
+          </select>
+        </div>
+      </div>
+      <div class="col-md-3 text-md-end">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="material-icons align-middle me-1">date_range</i> Apply Range
+        </button>
+        <a href="{% url 'sales_report' %}" class="btn btn-outline-secondary">Reset</a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Sales Metrics -->
+<div class="row mb-4">
+  <div class="col-md-3 mb-3">
+    <div class="card metric-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="text-muted mb-1">Total Sales</h6>
+            <h2 class="mb-0">GHS{{ total_sales|floatformat:2 }}</h2>
+            <p class="text-muted mb-0">
+              {{ sale_count }} orders
+              {% if sales_trend > 0 %}
+              <span class="trend-indicator trend-up">
+                <i class="material-icons align-middle" style="font-size: 16px;">trending_up</i> {{ sales_trend }}%
+              </span>
+              {% elif sales_trend < 0 %}
+              <span class="trend-indicator trend-down">
+                <i class="material-icons align-middle" style="font-size: 16px;">trending_down</i> {{ sales_trend|abs }}%
+              </span>
+              {% else %}
+              <span class="trend-indicator trend-neutral">
+                <i class="material-icons align-middle" style="font-size: 16px;">trending_flat</i> 0%
+              </span>
+              {% endif %}
+            </p>
+          </div>
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">point_of_sale</i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="card metric-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="text-muted mb-1">Average Order Value</h6>
+            <h2 class="mb-0">GHS{{ avg_order_value|floatformat:2 }}</h2>
+            <p class="text-muted mb-0">Per order</p>
+          </div>
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">receipt</i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="card metric-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="text-muted mb-1">Units Sold</h6>
+            <h2 class="mb-0">{{ total_units }}</h2>
+            <p class="text-muted mb-0">Total units</p>
+          </div>
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">inventory_2</i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="card metric-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="text-muted mb-1">Payment Rate</h6>
+            <h2 class="mb-0">{{ payment_rate|floatformat:1 }}%</h2>
+            <p class="text-muted mb-0">Orders paid</p>
+          </div>
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">payments</i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-8">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Revenue Trend</h5>
+        <div class="btn-group" role="group">
+          <button type="button" class="btn btn-sm btn-outline-secondary active">Revenue</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary">Orders</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary">Units</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="height: 300px;">
+          <canvas id="salesTrendChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Sales</h5>
+        <a href="{% url 'sale_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="card-body p-0">
+        {% if sales %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Invoice #</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sale in sales %}
+              <tr>
+                <td>
+                  <a href="{% url 'sale_detail' sale.id %}">{{ sale.invoice_number }}</a>
+                </td>
+                <td>{{ sale.customer.name }}</td>
+                <td>{{ sale.sale_date }}</td>
+                <td>{{ sale.item_count }}</td>
+                <td>GHS{{ sale.total_amount|floatformat:2 }}</td>
+                <td>
+                  {% if sale.status == 'draft' %}
+                  <span class="badge bg-secondary">Draft</span>
+                  {% elif sale.status == 'confirmed' %}
+                  <span class="badge bg-primary">Confirmed</span>
+                  {% elif sale.status == 'shipped' %}
+                  <span class="badge bg-info">Shipped</span>
+                  {% elif sale.status == 'delivered' %}
+                  <span class="badge bg-success">Delivered</span>
+                  {% else %}
+                  <span class="badge bg-danger">Cancelled</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if sale.payment_status == 'pending' %}
+                  <span class="badge bg-warning">Pending</span>
+                  {% elif sale.payment_status == 'partial' %}
+                  <span class="badge bg-info">Partial</span>
+                  {% elif sale.payment_status == 'paid' %}
+                  <span class="badge bg-success">Paid</span>
+                  {% else %}
+                  <span class="badge bg-danger">Cancelled</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No sales in the selected period</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Top Products</h5>
+      </div>
+      <div class="card-body">
+        <div style="height: 300px;">
+          <canvas id="topProductsChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Top Customers</h5>
+      </div>
+      <div class="card-body p-0">
+        {% if top_customers %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Orders</th>
+                <th>Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for customer in top_customers %}
+              <tr>
+                <td>
+                  <a href="{% url 'customer_detail' customer.id %}">{{ customer.name }}</a>
+                </td>
+                <td>{{ customer.order_count }}</td>
+                <td>GHS{{ customer.total_spend|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No customer data available</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Revenue by Status</h5>
+      </div>
+      <div class="card-body">
+        <div style="height: 200px;">
+          <canvas id="statusDistributionChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Get CSS variables for chart colors
+    const style = getComputedStyle(document.documentElement);
+    const colorPrimary = style.getPropertyValue('--color-600');
+    const colorSecondary = style.getPropertyValue('--color-300');
+    
+    // Sales Trend Chart
+    const trendCtx = document.getElementById('salesTrendChart').getContext('2d');
+    const salesTrendChart = new Chart(trendCtx, {
+      type: 'line',
+      data: {
+        labels: {{ trend_dates|safe }},
+        datasets: [
+          {
+            label: 'Revenue',
+            data: {{ revenue_data|safe }},
+            borderColor: colorPrimary,
+            backgroundColor: 'rgba(200, 68, 58, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Revenue (GHS)',
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Date',
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+    
+    // Top Products Chart
+    const productsCtx = document.getElementById('topProductsChart').getContext('2d');
+    const topProductsChart = new Chart(productsCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ top_product_names|safe }},
+        datasets: [
+          {
+            axis: 'y',
+            label: 'Revenue',
+            data: {{ top_product_values|safe }},
+            backgroundColor: 'rgba(200, 68, 58, 0.7)',
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        scales: {
+          x: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Revenue (GHS)',
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+    
+    // Status Distribution Chart
+    const statusCtx = document.getElementById('statusDistributionChart').getContext('2d');
+    const statusDistributionChart = new Chart(statusCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Confirmed', 'Shipped', 'Delivered', 'Cancelled'],
+        datasets: [
+          {
+            data: [
+              {{ confirmed_revenue|default:0 }}, 
+              {{ shipped_revenue|default:0 }}, 
+              {{ delivered_revenue|default:0 }}, 
+              {{ cancelled_revenue|default:0 }}
+            ],
+            backgroundColor: [
+              '#2c7be5',  // Primary (Confirmed)
+              '#39afd1',  // Info (Shipped)
+              '#00d97e',  // Success (Delivered)
+              '#e63757'   // Danger (Cancelled)
+            ],
+            borderWidth: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            }
+          }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

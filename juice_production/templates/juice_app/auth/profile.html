@@ -1,0 +1,131 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}User Profile | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="material-icons align-middle me-1">person</i>
+                    Profile Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div style="width: 100px; height: 100px; background-color: var(--color-600); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                        <i class="material-icons" style="font-size: 60px; color: white;">account_circle</i>
+                    </div>
+                    <h3 class="mt-3">{{ user.get_full_name }}</h3>
+                    <p class="text-muted">{{ user.username }}</p>
+                    <span class="badge bg-primary">{{ profile.role|title }}</span>
+                </div>
+                
+                <table class="table">
+                    <tr>
+                        <th><i class="material-icons align-middle me-1">email</i> Email</th>
+                        <td>{{ user.email }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="material-icons align-middle me-1">phone</i> Phone</th>
+                        <td>{{ profile.phone|default:"Not provided" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="material-icons align-middle me-1">business</i> Department</th>
+                        <td>{{ profile.department|default:"Not specified" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="material-icons align-middle me-1">event</i> Joined</th>
+                        <td>{{ user.date_joined|date:"F j, Y" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="material-icons align-middle me-1">login</i> Last Login</th>
+                        <td>{{ user.last_login|date:"F j, Y" }}</td>
+                    </tr>
+                </table>
+                
+                <div class="mt-4 text-center">
+                    <a href="{% url 'edit_profile' %}" class="btn btn-primary">
+                        <i class="material-icons align-middle me-1">edit</i>
+                        Edit Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="material-icons align-middle me-1">history</i>
+                    Recent Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_activities %}
+                <div class="list-group">
+                    {% for activity in recent_activities %}
+                    <div class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ activity.title }}</h6>
+                            <small>{{ activity.timestamp|date:"F j, Y" }}</small>
+                        </div>
+                        <p class="mb-1">{{ activity.description }}</p>
+                        <small class="text-muted">
+                            <i class="material-icons align-text-bottom" style="font-size: 14px;">{{ activity.icon }}</i>
+                            {{ activity.category }}
+                        </small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="material-icons" style="font-size: 48px; color: var(--color-200);">history</i>
+                    <p class="mt-3 text-muted">No recent activity</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="material-icons align-middle me-1">settings</i>
+                    Account Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="list-group mb-3">
+                            <a href="{% url 'edit_profile' %}" class="list-group-item list-group-item-action">
+                                <i class="material-icons align-middle me-2">edit</i>
+                                Edit Profile
+                            </a>
+                            <a href="{% url 'password_change' %}" class="list-group-item list-group-item-action">
+                                <i class="material-icons align-middle me-2">lock</i>
+                                Change Password
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="list-group">
+                            <a href="{% url 'dashboard' %}" class="list-group-item list-group-item-action">
+                                <i class="material-icons align-middle me-2">dashboard</i>
+                                Dashboard
+                            </a>
+                            <a href="{% url 'logout' %}" class="list-group-item list-group-item-action text-danger">
+                                <i class="material-icons align-middle me-2">logout</i>
+                                Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,328 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}{{ material.name }} Details | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1>{{ material.name }}</h1>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'raw_material_list' %}">Raw Materials</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ material.name }}</li>
+      </ol>
+    </nav>
+  </div>
+  <div>
+    {% if request.user.profile.role in 'admin,superadmin'|split:',' or material.created_by == request.user %}
+    <a href="{% url 'raw_material_edit' material.id %}" class="btn btn-primary">
+      <i class="material-icons">edit</i> Edit
+    </a>
+    <a href="{% url 'raw_material_delete' material.id %}" class="btn btn-danger">
+      <i class="material-icons">delete</i> Delete
+    </a>
+    {% endif %}
+    <a href="{% url 'purchase_order_new' %}?material={{ material.id }}" class="btn btn-secondary">
+      <i class="material-icons">add_shopping_cart</i> Order
+    </a>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Raw Material Details</h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="d-flex align-items-center">
+            <div style="width: 60px; height: 60px; border-radius: 50%; background-color: 
+              {% if material.needs_reorder %}var(--warning){% else %}var(--success){% endif %};
+              display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+              <i class="material-icons" style="font-size: 32px; color: white;">
+                {% if material.is_fruit %}eco{% else %}inventory_2{% endif %}
+              </i>
+            </div>
+            <div>
+              <h4 class="mb-1">{{ material.name }}</h4>
+              {% if material.is_fruit %}
+              <span class="badge bg-success">Fruit</span>
+              {% endif %}
+              {% if material.needs_reorder %}
+              <span class="badge bg-warning">Low Stock</span>
+              {% else %}
+              <span class="badge bg-success">In Stock</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        
+        <table class="table">
+          <tr>
+            <th style="width: 40%;">Name</th>
+            <td>{{ material.name }}</td>
+          </tr>
+          <tr>
+            <th>Quantity in Stock</th>
+            <td{% if material.needs_reorder %} class="text-danger fw-bold"{% endif %}>
+              {{ material.quantity_in_stock }} {{ material.unit }}
+            </td>
+          </tr>
+          <tr>
+            <th>Unit</th>
+            <td>{{ material.unit }}</td>
+          </tr>
+          <tr>
+            <th>Unit Cost</th>
+            <td>GHS{{ material.unit_cost|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <th>Total Value</th>
+            <td>GHS{{ material.quantity_in_stock|multiply:material.unit_cost|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <th>Reorder Level</th>
+            <td>{{ material.reorder_level }} {{ material.unit }}</td>
+          </tr>
+          <tr>
+            <th>Is Fruit</th>
+            <td>
+              {% if material.is_fruit %}
+              <i class="material-icons text-success">check_circle</i> Yes
+              {% else %}
+              <i class="material-icons text-muted">remove</i> No
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th>Last Purchase Date</th>
+            <td>{{ material.last_purchase_date|default:"Not recorded" }}</td>
+          </tr>
+          <tr>
+            <th>Last Updated</th>
+            <td>{{ material.last_updated }}</td>
+          </tr>
+        </table>
+        
+        {% if material.description %}
+        <div class="mt-3">
+          <h6>Description:</h6>
+          <p>{{ material.description }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    {% if material.supplier %}
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Supplier Information</h5>
+      </div>
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+          <div style="width: 50px; height: 50px; border-radius: 50%; background-color: var(--color-700);
+              display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+            <i class="material-icons" style="font-size: 24px; color: white;">business</i>
+          </div>
+          <div>
+            <h5 class="mb-1">{{ material.supplier.name }}</h5>
+            <span class="text-muted">{{ material.supplier.contact_person }}</span>
+          </div>
+        </div>
+        
+        <table class="table">
+          <tr>
+            <th style="width: 30%;">Phone</th>
+            <td>{{ material.supplier.phone }}</td>
+          </tr>
+          <tr>
+            <th>Email</th>
+            <td>{{ material.supplier.email }}</td>
+          </tr>
+          <tr>
+            <th>Address</th>
+            <td>{{ material.supplier.address|linebreaksbr }}</td>
+          </tr>
+        </table>
+        
+        <div class="mt-3">
+          <a href="{% url 'customer_detail' material.supplier.id %}" class="btn btn-sm btn-outline-primary">
+            <i class="material-icons align-text-bottom" style="font-size: 16px;">business</i>
+            View Supplier Profile
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Usage in Products</h5>
+        <span class="badge bg-primary">{{ recipes|length }} Products</span>
+      </div>
+      <div class="card-body p-0">
+        {% if recipes %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Quantity per Unit</th>
+                <th>Is Primary</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for recipe in recipes %}
+              <tr>
+                <td>
+                  <a href="{% url 'product_detail' recipe.product.id %}">{{ recipe.product.name }}</a>
+                </td>
+                <td>
+                  {{ recipe.quantity_required }} {{ material.unit }}
+                </td>
+                <td>
+                  {% if recipe.is_primary %}
+                  <i class="material-icons text-success">check_circle</i>
+                  {% else %}
+                  <i class="material-icons text-muted">remove</i>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <i class="material-icons" style="font-size: 48px; color: var(--color-200);">local_drink</i>
+          <p class="mt-3 text-muted">Not used in any products yet</p>
+          <a href="{% url 'product_new' %}" class="btn btn-sm btn-primary mt-2">Create Product</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Purchase History</h5>
+        <a href="#" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="card-body p-0">
+        {% if purchase_history %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>PO Number</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for purchase in purchase_history %}
+              <tr>
+                <td>{{ purchase.po.order_date }}</td>
+                <td>
+                  <a href="{% url 'purchase_order_detail' purchase.po.id %}">{{ purchase.po.po_number }}</a>
+                </td>
+                <td>{{ purchase.quantity_received }} {{ material.unit }}</td>
+                <td>GHS{{ purchase.unit_price|floatformat:2 }}</td>
+                <td>GHS{{ purchase.quantity_received|multiply:purchase.unit_price|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <i class="material-icons" style="font-size: 48px; color: var(--color-200);">receipt_long</i>
+          <p class="mt-3 text-muted">No purchase history</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Inventory Trend</h5>
+      </div>
+      <div class="card-body">
+        <div style="height: 200px;">
+          <canvas id="inventoryChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Get CSS variables for chart colors
+    const style = getComputedStyle(document.documentElement);
+    const colorPrimary = style.getPropertyValue('--color-600');
+    const colorSecondary = style.getPropertyValue('--color-300');
+    
+    // Sample data for the inventory chart
+    const ctx = document.getElementById('inventoryChart').getContext('2d');
+    const inventoryChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        datasets: [
+          {
+            label: 'Inventory Level',
+            data: [45, 40, 52, 48, 65, 59, 70, 62, 90, 85, 78, {{ material.quantity_in_stock }}],
+            backgroundColor: 'rgba(200, 68, 58, 0.2)',
+            borderColor: colorPrimary,
+            borderWidth: 2,
+            tension: 0.4
+          },
+          {
+            label: 'Reorder Level',
+            data: Array(12).fill({{ material.reorder_level }}),
+            backgroundColor: 'transparent',
+            borderColor: colorSecondary,
+            borderWidth: 2,
+            borderDash: [5, 5]
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: '{{ material.unit }}',
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: {
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            }
+          }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

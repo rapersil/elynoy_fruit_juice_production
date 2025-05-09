@@ -1,0 +1,224 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}Invoice {{ sale.invoice_number }} | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1>Invoice: {{ sale.invoice_number }}</h1>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'sale_list' %}">Sales</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ sale.invoice_number }}</li>
+      </ol>
+    </nav>
+  </div>
+  <div>
+    {% if sale.status == 'draft' %}
+    <a href="{% url 'sale_edit' sale.id %}" class="btn btn-primary">
+      <i class="material-icons">edit</i> Edit
+    </a>
+    <a href="{% url 'sale_confirm' sale.id %}" class="btn btn-success">
+      <i class="material-icons">check_circle</i> Confirm
+    </a>
+    {% endif %}
+    
+    <a href="{% url 'sale_receipt' sale.id %}" class="btn btn-outline-secondary">
+      <i class="material-icons">print</i> Print
+    </a>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-5">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Sale Details</h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="d-flex align-items-center">
+            <div style="width: 60px; height: 60px; border-radius: 50%; background-color: 
+              {% if sale.status == 'delivered' %}var(--success)
+              {% elif sale.status == 'shipped' %}var(--info)
+              {% elif sale.status == 'confirmed' %}var(--color-600)
+              {% elif sale.status == 'draft' %}var(--secondary)
+              {% else %}var(--danger){% endif %};
+              display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+              <i class="material-icons" style="font-size: 32px; color: white;">
+                {% if sale.status == 'delivered' %}check_circle
+                {% elif sale.status == 'shipped' %}local_shipping
+                {% elif sale.status == 'confirmed' %}thumb_up
+                {% elif sale.status == 'draft' %}edit
+                {% else %}cancel{% endif %}
+              </i>
+            </div>
+            <div>
+              <h4 class="mb-1">{{ sale.customer.name }}</h4>
+              <span class="badge 
+                {% if sale.status == 'delivered' %}bg-success
+                {% elif sale.status == 'shipped' %}bg-info
+                {% elif sale.status == 'confirmed' %}bg-primary
+                {% elif sale.status == 'draft' %}bg-secondary
+                {% else %}bg-danger{% endif %}">
+                {{ sale.status|title }}
+              </span>
+              <span class="badge 
+                {% if sale.payment_status == 'paid' %}bg-success
+                {% elif sale.payment_status == 'partial' %}bg-info
+                {% elif sale.payment_status == 'pending' %}bg-warning
+                {% else %}bg-danger{% endif %}">
+                Payment: {{ sale.payment_status|title }}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <table class="table">
+          <tr>
+            <th style="width: 40%;">Invoice Number</th>
+            <td>{{ sale.invoice_number }}</td>
+          </tr>
+          <tr>
+            <th>Customer</th>
+            <td>{{ sale.customer.name }}</td>
+          </tr>
+          <tr>
+            <th>Contact Person</th>
+            <td>{{ sale.customer.contact_person }}</td>
+          </tr>
+          <tr>
+            <th>Phone</th>
+            <td>{{ sale.customer.phone }}</td>
+          </tr>
+          <tr>
+            <th>Email</th>
+            <td>{{ sale.customer.email }}</td>
+          </tr>
+          <tr>
+            <th>Sale Date</th>
+            <td>{{ sale.sale_date }}</td>
+          </tr>
+          <tr>
+            <th>Total Amount</th>
+            <td>GHS{{ sale.total_amount|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <th>Created By</th>
+            <td>{{ sale.created_by|default:"System" }}</td>
+          </tr>
+        </table>
+        
+        {% if sale.notes %}
+        <div class="mt-3">
+          <h6>Notes:</h6>
+          <p>{{ sale.notes }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Customer Information</h5>
+      </div>
+      <div class="card-body">
+        <address>
+          <strong>{{ sale.customer.name }}</strong><br>
+          {{ sale.customer.address|linebreaksbr }}
+        </address>
+        
+        <div class="mt-3">
+          <a href="{% url 'customer_detail' sale.customer.id %}" class="btn btn-sm btn-outline-primary">
+            <i class="material-icons align-text-bottom" style="font-size: 16px;">people</i>
+            View Customer Profile
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-7">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Sale Items</h5>
+        <span class="badge bg-primary">{{ items|length }} Items</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in items %}
+              <tr>
+                <td>
+                  <a href="{% url 'product_detail' item.product.id %}">
+                    {{ item.product.name }}
+                  </a>
+                  <br>
+                  <small class="text-muted">{{ item.product.sku }}</small>
+                </td>
+                <td>{{ item.quantity }}</td>
+                <td>GHS{{ item.unit_price|floatformat:2 }}</td>
+                <td>GHS{{ item.total_price|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot class="bg-light">
+              <tr>
+                <th colspan="3" class="text-end">Total:</th>
+                <th>GHS{{ sale.total_amount|floatformat:2 }}</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    {% if sale.status != 'draft' %}
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Batch Information</h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Batch Numbers</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in items %}
+              <tr>
+                <td>{{ item.product.name }}</td>
+                <td>
+                 {% if item.batch_list %}
+                      {% for batch in item.batch_list %}
+                          <span class="badge bg-light text-dark">{{ batch }}</span>
+                      {% endfor %}
+                  {% else %}
+                      <span class="text-muted">Not specified</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

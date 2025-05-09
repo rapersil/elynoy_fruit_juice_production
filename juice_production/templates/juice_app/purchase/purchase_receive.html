@@ -1,0 +1,129 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}Receive Items for PO {{ po.po_number }} | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>Receive Items</h1>
+  <a href="{% url 'purchase_order_detail' po.id %}" class="btn btn-outline-secondary">
+    <i class="material-icons">arrow_back</i> Back to Purchase Order
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">Receive Items for PO: {{ po.po_number }}</h5>
+  </div>
+  <div class="card-body">
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <table class="table">
+          <tr>
+            <th style="width: 40%;">Purchase Order:</th>
+            <td>{{ po.po_number }}</td>
+          </tr>
+          <tr>
+            <th>Supplier:</th>
+            <td>{{ po.supplier.name }}</td>
+          </tr>
+          <tr>
+            <th>Order Date:</th>
+            <td>{{ po.order_date }}</td>
+          </tr>
+          <tr>
+            <th>Status:</th>
+            <td>
+              {% if po.status == 'submitted' %}
+              <span class="badge bg-primary">Submitted</span>
+              {% elif po.status == 'partial' %}
+              <span class="badge bg-warning">Partially Received</span>
+              {% endif %}
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    
+    <form method="post">
+      {% csrf_token %}
+      
+      <h5 class="mb-3">Receive Items</h5>
+      <p class="text-muted mb-3">Enter the quantities being received today. Leave blank for items not received.</p>
+      
+      <div class="table-responsive">
+        <table class="table table-bordered">
+          <thead class="bg-light">
+            <tr>
+              <th>Raw Material</th>
+              <th>Unit</th>
+              <th>Ordered</th>
+              <th>Previously Received</th>
+              <th>Remaining</th>
+              <th>Quantity to Receive</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item, form in forms %}
+            <tr>
+              <td>{{ item.raw_material.name }}</td>
+              <td>{{ item.raw_material.unit }}</td>
+              <td>{{ item.quantity_ordered }}</td>
+              <td>{{ item.quantity_received }}</td>
+              <td>{{ item.quantity_ordered|sub:item.quantity_received }}</td>
+              <td>
+                {{ form.quantity_receiving }}
+                {% if form.quantity_receiving.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ form.quantity_receiving.errors }}
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="alert alert-info mt-4">
+        <div class="d-flex">
+          <div class="me-3">
+            <i class="material-icons">info</i>
+          </div>
+          <div>
+            <h6 class="mb-1">Important Information</h6>
+            <p class="mb-0">Receiving items will update your inventory. The quantities entered will be added to the current stock of each raw material. Make sure the quantities are correct before submitting.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-end mt-4">
+        <a href="{% url 'purchase_order_detail' po.id %}" class="btn btn-outline-secondary me-2">
+          Cancel
+        </a>
+        <button type="submit" class="btn btn-success">
+          <i class="material-icons">inventory</i>
+          Confirm Receipt
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap classes to form inputs
+    document.querySelectorAll('input[type="text"], input[type="number"]').forEach(function(el) {
+      el.classList.add('form-control');
+    });
+    
+    // Auto-focus the first quantity input
+    const firstInput = document.querySelector('input[name^="item_"]');
+    if (firstInput) {
+      firstInput.focus();
+    }
+  });
+</script>
+{% endblock %}

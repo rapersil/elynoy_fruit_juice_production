@@ -1,0 +1,125 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}New Production Batch | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>New Production Batch</h1>
+  <a href="{% url 'production_list' %}" class="btn btn-outline-secondary">
+    <i class="material-icons">arrow_back</i> Back to List
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">Create Production Batch</h5>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.product.id_for_label }}">Product <span class="text-danger">*</span></label>
+            {{ form.product }}
+            {% if form.product.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.product.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.planned_quantity.id_for_label }}">Planned Quantity <span class="text-danger">*</span></label>
+            {{ form.planned_quantity }}
+            {% if form.planned_quantity.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.planned_quantity.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.production_date.id_for_label }}">Production Date <span class="text-danger">*</span></label>
+            {{ form.production_date }}
+            {% if form.production_date.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.production_date.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group mb-3">
+        <label for="{{ form.notes.id_for_label }}">Notes</label>
+        {{ form.notes }}
+        {% if form.notes.errors %}
+        <div class="invalid-feedback d-block">
+          {{ form.notes.errors }}
+        </div>
+        {% endif %}
+      </div>
+      
+      <div class="alert alert-info mt-4">
+        <div class="d-flex">
+          <div class="me-3">
+            <i class="material-icons">info</i>
+          </div>
+          <div>
+            <h6 class="mb-1">Important Information</h6>
+            <p class="mb-0">Creating a production batch will automatically calculate the required raw materials based on the product's recipe. The batch will be created with a 'Planned' status, and you can start production once all materials are available.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-end mt-4">
+        {% if batch %}
+          <a href="{% url 'production_detail' batch.id %}" class="btn btn-outline-secondary me-2">
+            <i class="material-icons">arrow_back</i> Cancel
+          </a>
+          <button type="submit" class="btn btn-primary">
+            <i class="material-icons">save</i> Update Batch
+          </button>
+        {% else %}
+          <a href="{% url 'production_list' %}" class="btn btn-outline-secondary me-2">
+            <i class="material-icons">arrow_back</i> Cancel
+          </a>
+          <button type="submit" class="btn btn-primary">
+            <i class="material-icons">save</i> Create Batch
+          </button>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap classes to form inputs
+    document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea, select').forEach(function(el) {
+      el.classList.add('form-control');
+    });
+    
+    // Auto-populate today's date if date field is empty
+    const productionDateField = document.getElementById('{{ form.production_date.id_for_label }}');
+    if (productionDateField && !productionDateField.value) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      productionDateField.value = `${yyyy}-${mm}-${dd}`;
+    }
+  });
+</script>
+{% endblock %}

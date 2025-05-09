@@ -1,0 +1,63 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}Delete {{ material.name }} | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>Delete Raw Material</h1>
+  <a href="{% url 'raw_material_detail' material.id %}" class="btn btn-outline-secondary">
+    <i class="material-icons">arrow_back</i> Back to Details
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header bg-danger text-white">
+    <h5 class="mb-0">
+      <i class="material-icons align-middle me-1">warning</i>
+      Confirm Deletion
+    </h5>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-danger">
+      <p class="mb-0">You are about to delete the raw material <strong>{{ material.name }}</strong>. This action cannot be undone.</p>
+    </div>
+    
+    <div class="mb-4">
+      <h6>Material Details:</h6>
+      <table class="table">
+        <tr>
+          <th style="width: 30%;">Name:</th>
+          <td>{{ material.name }}</td>
+        </tr>
+        <tr>
+          <th>Current Stock:</th>
+          <td>{{ material.quantity_in_stock }} {{ material.unit }}</td>
+        </tr>
+        <tr>
+          <th>Unit Cost:</th>
+          <td>GHS{{ material.unit_cost|floatformat:2 }}</td>
+        </tr>
+        <tr>
+          <th>Total Value:</th>
+          <td>GHS{{ material.quantity_in_stock|multiply:material.unit_cost|floatformat:2 }}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <form method="post" class="mt-4">
+      {% csrf_token %}
+      <div class="d-flex justify-content-end">
+        <a href="{% url 'raw_material_detail' material.id %}" class="btn btn-outline-secondary me-2">
+          <i class="material-icons">arrow_back</i>
+          Cancel
+        </a>
+        <button type="submit" class="btn btn-danger">
+          <i class="material-icons">delete</i>
+          Confirm Deletion
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

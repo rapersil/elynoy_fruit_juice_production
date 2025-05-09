@@ -1,0 +1,217 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}Complete Batch {{ batch.batch_number }} | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>Complete Production Batch</h1>
+  <a href="{% url 'production_detail' batch.id %}" class="btn btn-outline-secondary">
+    <i class="material-icons">arrow_back</i> Back to Details
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">Complete Batch: {{ batch.batch_number }}</h5>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="production_date" value="{{ batch.production_date|date:'Y-m-d' }}">
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <table class="table">
+            <tr>
+              <th style="width: 40%;">Batch Number:</th>
+              <td>{{ batch.batch_number }}</td>
+            </tr>
+            <tr>
+              <th>Product:</th>
+              <td>{{ batch.product.name }}</td>
+            </tr>
+            <tr>
+              <th>Planned Quantity:</th>
+              <td>{{ batch.planned_quantity }}</td>
+            </tr>
+            <tr>
+              <th>Production Date:</th>
+              <td>{{ batch.production_date }}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      
+      <hr class="mb-4">
+      
+      <h5 class="mb-3">Production Results</h5>
+      
+     <div class="row">
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.actual_quantity_produced.id_for_label }}">Actual Quantity Produced <span class="text-danger">*</span></label>
+            {{ form.actual_quantity_produced }}
+            {% if form.actual_quantity_produced.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.actual_quantity_produced.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <div class="form-check mt-4">
+              {{ form.quality_check_passed }}
+              <label class="form-check-label" for="{{ form.quality_check_passed.id_for_label }}">
+                Quality Check Passed
+              </label>
+              {% if form.quality_check_passed.errors %}
+              <div class="invalid-feedback d-block">
+                {{ form.quality_check_passed.errors }}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+    </div>
+  
+  <div class="col-md-6">
+    <div class="form-group mb-3">
+      <div class="form-check mt-4">
+        {{ form.quality_check_passed }}
+        <label class="form-check-label" for="{{ form.quality_check_passed.id_for_label }}">
+          Quality Check Passed
+        </label>
+        {% if form.quality_check_passed.errors %}
+        <div class="invalid-feedback d-block">
+          {{ form.quality_check_passed.errors }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+      
+      <div class="form-group mb-3">
+        <label for="{{ form.notes.id_for_label }}">Notes</label>
+        {{ form.notes }}
+        {% if form.notes.errors %}
+        <div class="invalid-feedback d-block">
+          {{ form.notes.errors }}
+        </div>
+        {% endif %}
+      </div>
+      
+      <hr class="my-4">
+      
+      <h5 class="mb-3">Material Usage</h5>
+      <p class="text-muted mb-3">Record the actual quantities of raw materials used in this production batch.</p>
+      
+      {{ formset.management_form }}
+      
+      <div class="table-responsive">
+        <table class="table table-bordered">
+          <thead class="bg-light">
+            <tr>
+              <th>Raw Material</th>
+              <th>Planned Quantity</th>
+              <th>Actual Quantity Used</th>
+              <th>Waste Quantity</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for usage_form in formset %}
+            {{ usage_form.id }}
+            <tr>
+              <td>
+                {{ usage_form.instance.raw_material.name }}
+                <br>
+                <small class="text-muted">{{ usage_form.instance.raw_material.unit }}</small>
+              </td>
+              <td>{{ usage_form.instance.planned_quantity }}</td>
+              <td>
+                {{ usage_form.actual_quantity_used }}
+                {% if usage_form.actual_quantity_used.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ usage_form.actual_quantity_used.errors }}
+                </div>
+                {% endif %}
+              </td>
+              <td>
+                {{ usage_form.waste_quantity }}
+                {% if usage_form.waste_quantity.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ usage_form.waste_quantity.errors }}
+                </div>
+                {% endif %}
+              </td>
+              <td>
+                {{ usage_form.notes }}
+                {% if usage_form.notes.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ usage_form.notes.errors }}
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="alert alert-warning mt-4">
+        <div class="d-flex">
+          <div class="me-3">
+            <i class="material-icons">warning</i>
+          </div>
+          <div>
+            <h6 class="mb-1">Important</h6>
+            <p class="mb-0">Completing this batch will update your inventory by deducting the actual materials used and adding the produced quantity to your product stock. This action cannot be undone.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-end mt-4">
+        <a href="{% url 'production_detail' batch.id %}" class="btn btn-outline-secondary me-2">
+          Cancel
+        </a>
+        <button type="submit" class="btn btn-success">
+          <i class="material-icons">task_alt</i>
+          Complete Batch
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap classes to form inputs
+    document.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(function(el) {
+      el.classList.add('form-control');
+    });
+    
+    document.querySelectorAll('input[type="checkbox"]').forEach(function(el) {
+      el.classList.add('form-check-input');
+    });
+    
+    // Set default actual quantity to planned quantity if not already set
+    const actualQuantityField = document.getElementById('{{ form.actual_quantity_produced.id_for_label }}');
+    if (actualQuantityField && !actualQuantityField.value) {
+      actualQuantityField.value = '{{ batch.planned_quantity }}';
+    }
+    
+    // Auto-populate actual quantity used with planned quantity
+    {% for usage_form in formset %}
+    const actualField{{ forloop.counter }} = document.getElementById('{{ usage_form.actual_quantity_used.id_for_label }}');
+    if (actualField{{ forloop.counter }} && !actualField{{ forloop.counter }}.value) {
+      actualField{{ forloop.counter }}.value = '{{ usage_form.instance.planned_quantity }}';
+    }
+    {% endfor %}
+  });
+</script>
+{% endblock %}

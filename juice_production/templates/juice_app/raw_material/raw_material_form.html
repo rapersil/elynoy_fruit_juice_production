@@ -1,0 +1,178 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}
+  {% if material %}Edit {{ material.name }}{% else %}New Raw Material{% endif %} | Fruit Juice Production
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>{% if material %}Edit Raw Material{% else %}New Raw Material{% endif %}</h1>
+  <a href="{% url 'raw_material_list' %}" class="btn btn-outline-secondary">
+    <i class="material-icons">arrow_back</i> Back to List
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">{% if material %}Edit {{ material.name }}{% else %}Create New Raw Material{% endif %}</h5>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.name.id_for_label }}">Name <span class="text-danger">*</span></label>
+            {{ form.name }}
+            {% if form.name.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.name.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.unit.id_for_label }}">Unit <span class="text-danger">*</span></label>
+            {{ form.unit }}
+            {% if form.unit.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.unit.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-4">
+          <div class="form-group mb-3">
+            <label for="{{ form.quantity_in_stock.id_for_label }}">Quantity in Stock <span class="text-danger">*</span></label>
+            {{ form.quantity_in_stock }}
+            {% if form.quantity_in_stock.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.quantity_in_stock.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="form-group mb-3">
+            <label for="{{ form.unit_cost.id_for_label }}">Unit Cost <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text">GHS</span>
+              {{ form.unit_cost }}
+            </div>
+            {% if form.unit_cost.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.unit_cost.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="form-group mb-3">
+            <label for="{{ form.reorder_level.id_for_label }}">Reorder Level <span class="text-danger">*</span></label>
+            {{ form.reorder_level }}
+            {% if form.reorder_level.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.reorder_level.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.supplier.id_for_label }}">Supplier</label>
+            {{ form.supplier }}
+            {% if form.supplier.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.supplier.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.last_purchase_date.id_for_label }}">Last Purchase Date</label>
+            {{ form.last_purchase_date }}
+            {% if form.last_purchase_date.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.last_purchase_date.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group mb-3">
+        <div class="form-check">
+          {{ form.is_fruit }}
+          <label class="form-check-label" for="{{ form.is_fruit.id_for_label }}">
+            This is a fruit raw material
+          </label>
+          {% if form.is_fruit.errors %}
+          <div class="invalid-feedback d-block">
+            {{ form.is_fruit.errors }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="form-group mb-3">
+        <label for="{{ form.description.id_for_label }}">Description</label>
+        {{ form.description }}
+        {% if form.description.errors %}
+        <div class="invalid-feedback d-block">
+          {{ form.description.errors }}
+        </div>
+        {% endif %}
+      </div>
+      
+      <div class="d-flex justify-content-end mt-4">
+        <a href="{% url 'raw_material_list' %}" class="btn btn-outline-secondary me-2">
+          Cancel
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="material-icons">save</i>
+          {% if material %}Update{% else %}Create{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap classes to form inputs
+    document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea, select').forEach(function(el) {
+      el.classList.add('form-control');
+    });
+    
+    document.querySelectorAll('input[type="checkbox"]').forEach(function(el) {
+      el.classList.add('form-check-input');
+    });
+    
+    // Set today's date as the default for last purchase date if creating a new material
+    const lastPurchaseDateField = document.getElementById('{{ form.last_purchase_date.id_for_label }}');
+    if (lastPurchaseDateField && !lastPurchaseDateField.value) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      lastPurchaseDateField.value = `${yyyy}-${mm}-${dd}`;
+    }
+  });
+</script>
+{% endblock %}

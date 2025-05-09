@@ -1,0 +1,207 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}Customers | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>Customers</h1>
+  <a href="{% url 'customer_new' %}" class="btn btn-primary">
+    <i class="material-icons">add_circle</i> New Customer
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">All Customers</h5>
+      <div>
+        <div class="btn-group" role="group">
+          <button type="button" class="btn btn-sm btn-outline-secondary active">All</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary">Active</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary">Inactive</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    {% if customers %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Contact Person</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for customer in customers %}
+          <tr>
+            <td>{{ customer.name }}</td>
+            <td>{{ customer.contact_person }}</td>
+            <td>{{ customer.phone }}</td>
+            <td>{{ customer.email }}</td>
+            <td>
+              {% if customer.is_buyer and customer.is_supplier %}
+              <span class="badge bg-info">Buyer & Supplier</span>
+              {% elif customer.is_buyer %}
+              <span class="badge bg-primary">Buyer</span>
+              {% elif customer.is_supplier %}
+              <span class="badge" style="background-color: var(--color-600);">Supplier</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if customer.is_active %}
+              <span class="badge bg-success">Active</span>
+              {% else %}
+              <span class="badge bg-secondary">Inactive</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="btn-group">
+                <a href="{% url 'customer_detail' customer.id %}" class="btn btn-sm btn-outline-primary">
+                  <i class="material-icons" style="font-size: 16px;">visibility</i>
+                </a>
+                <a href="{% url 'customer_edit' customer.id %}" class="btn btn-sm btn-outline-secondary">
+                  <i class="material-icons" style="font-size: 16px;">edit</i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <i class="material-icons" style="font-size: 48px; color: var(--color-200);">people</i>
+      <p class="mt-3 text-muted">No customers found</p>
+      <a href="{% url 'customer_new' %}" class="btn btn-primary mt-2">Add First Customer</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="material-icons align-middle me-1" style="font-size: 20px;">trending_up</i>
+          Sales Summary
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="text-center mb-3">
+              <h6 class="text-muted">Total Customers</h6>
+              <h2 class="mb-0">{{ total_customers }}</h2>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-center mb-3">
+              <h6 class="text-muted">Total Sales</h6>
+              <h2 class="mb-0">GHS{{ total_sales|floatformat:2 }}</h2>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="material-icons align-middle me-1" style="font-size: 20px;">stars</i>
+          Top Customers
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if top_customers %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Total Sales</th>
+                <th>Last Purchase</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for customer in top_customers %}
+              <tr>
+                <td>
+                  {% if customer %}
+                    <a href="{% url 'customer_detail' customer.id %}" class="btn btn-outline-secondary me-2">
+                          Cancel
+                      </a>
+                  {% else %}
+                      <a href="{% url 'customer_list' %}" class="btn btn-outline-secondary me-2">
+                          Cancel
+                      </a>
+                  {% endif %}
+                </td>
+                <td>GHS{{ customer.total_sales|floatformat:2 }}</td>
+                <td>{{ customer.last_purchase_date }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No sales data available yet</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get all customer rows
+        const customerRows = document.querySelectorAll('table tbody tr');
+        
+        // Get filter buttons
+        const filterButtons = document.querySelectorAll('.btn-group button');
+        
+        // Add click event to each filter button
+        filterButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                // Get filter type
+                const filter = this.textContent.trim().toLowerCase();
+                
+                // Show/hide rows based on filter
+                customerRows.forEach(row => {
+                    if (filter === 'all') {
+                        row.style.display = '';
+                    } else if (filter === 'active') {
+                        // Check if the row has an "Active" badge
+                        const hasActiveBadge = row.querySelector('.badge.bg-success');
+                        row.style.display = hasActiveBadge ? '' : 'none';
+                    } else if (filter === 'inactive') {
+                        // Check if the row has an "Inactive" badge
+                        const hasInactiveBadge = row.querySelector('.badge.bg-secondary');
+                        row.style.display = hasInactiveBadge ? '' : 'none';
+                    }
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}Production Batches | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>Production Batches</h1>
+  <a href="{% url 'production_new' %}" class="btn btn-primary">
+    <i class="material-icons">add_circle</i> New Batch
+  </a>
+</div>
+
+<!-- Filter Section -->
+<div class="card mb-4">
+  <div class="card-body bg-light">
+    <form method="get" class="row g-3">
+      <div class="col-md-3">
+        <label for="status-filter" class="form-label">Status</label>
+        <select id="status-filter" name="status" class="form-select">
+          <option value="all" {% if filter_status == 'all' %}selected{% endif %}>All Statuses</option>
+          <option value="planned" {% if filter_status == 'planned' %}selected{% endif %}>Planned</option>
+          <option value="in_progress" {% if filter_status == 'in_progress' %}selected{% endif %}>In Progress</option>
+          <option value="completed" {% if filter_status == 'completed' %}selected{% endif %}>Completed</option>
+          <option value="cancelled" {% if filter_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label for="product-filter" class="form-label">Product</label>
+        <select id="product-filter" name="product" class="form-select">
+          <option value="all" {% if filter_product == 'all' %}selected{% endif %}>All Products</option>
+          {% for product in all_products %}
+          <option value="{{ product.id }}" {% if filter_product == product.id|stringformat:"i" %}selected{% endif %}>{{ product.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label for="search-input" class="form-label">Search</label>
+        <div class="input-group">
+          <input type="text" id="search-input" name="search" class="form-control" placeholder="Search batches..." value="{{ search_query }}">
+          <button class="btn btn-primary" type="submit">
+            <i class="material-icons align-middle">search</i>
+          </button>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label for="date-range" class="form-label">Production Date</label>
+        <div class="input-group">
+          <input type="date" id="start-date" name="start_date" class="form-control" value="{{ start_date }}">
+          <span class="input-group-text">to</span>
+          <input type="date" id="end-date" name="end_date" class="form-control" value="{{ end_date }}">
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Production Metrics -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card h-100">
+      <div class="card-body text-center">
+        <i class="material-icons mb-2" style="font-size: 36px; color: var(--color-600);">pending_actions</i>
+        <h3>{{ total_batches }}</h3>
+        <p class="text-muted mb-0">Total Batches</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card h-100">
+      <div class="card-body text-center">
+        <i class="material-icons mb-2" style="font-size: 36px; color: var(--success);">check_circle</i>
+        <h3>{{ completed_batches }}</h3>
+        <p class="text-muted mb-0">Completed</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card h-100">
+      <div class="card-body text-center">
+        <i class="material-icons mb-2" style="font-size: 36px; color: var(--warning);">hourglass_full</i>
+        <h3>{{ in_progress_batches }}</h3>
+        <p class="text-muted mb-0">In Progress</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card h-100">
+      <div class="card-body text-center">
+        <i class="material-icons mb-2" style="font-size: 36px; color: var(--info);">speed</i>
+        <h3>{{ efficiency_percentage|floatformat:1 }}%</h3>
+        <p class="text-muted mb-0">Efficiency</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">Production Batches</h5>
+  </div>
+  <div class="card-body p-0">
+    {% if batches %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Batch Number</th>
+            <th>Product</th>
+            <th>Planned Quantity</th>
+            <th>Actual Quantity</th>
+            <th>Production Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for batch in batches %}
+          <tr>
+            <td>
+              <a href="{% url 'production_detail' batch.id %}">{{ batch.batch_number }}</a>
+            </td>
+            <td>{{ batch.product.name }}</td>
+            <td>{{ batch.planned_quantity }}</td>
+            <td>{{ batch.actual_quantity_produced|default:"-" }}</td>
+            <td>{{ batch.production_date }}</td>
+            <td>
+              {% if batch.status == 'completed' %}
+              <span class="badge bg-success">Completed</span>
+              {% elif batch.status == 'in_progress' %}
+              <span class="badge bg-warning">In Progress</span>
+              {% elif batch.status == 'planned' %}
+              <span class="badge bg-info">Planned</span>
+              {% else %}
+              <span class="badge bg-danger">Cancelled</span>
+              {% endif %}
+            </td>
+            <td>
+                <div class="btn-group">
+                    <a href="{% url 'production_detail' batch.id %}" class="btn btn-sm btn-outline-primary">
+                        <i class="material-icons" style="font-size: 16px;">visibility</i>
+                    </a>
+                    {% if batch.status == 'planned' %}
+                    <a href="{% url 'production_edit' batch.id %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="material-icons" style="font-size: 16px;">edit</i>
+                    </a>
+                    <a href="{% url 'production_start' batch.id %}" class="btn btn-sm btn-outline-success">
+                        <i class="material-icons" style="font-size: 16px;">play_arrow</i>
+                    </a>
+                    {% elif batch.status == 'in_progress' %}
+                    <a href="{% url 'production_complete' batch.id %}" class="btn btn-sm btn-outline-info">
+                        <i class="material-icons" style="font-size: 16px;">task_alt</i>
+                    </a>
+                    {% endif %}
+                    {% if batch.status != 'completed' and batch.status != 'cancelled' %}
+                    <a href="{% url 'production_cancel' batch.id %}" class="btn btn-sm btn-outline-danger">
+                        <i class="material-icons" style="font-size: 16px;">cancel</i>
+                    </a>
+                    {% endif %}
+                </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <i class="material-icons" style="font-size: 48px; color: var(--color-200);">science</i>
+      <p class="mt-3 text-muted">No production batches found</p>
+      <a href="{% url 'production_new' %}" class="btn btn-primary mt-2">Create First Batch</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Enable automatic form submission when filters change
+    document.getElementById('status-filter').addEventListener('change', function() {
+      this.form.submit();
+    });
+    
+    document.getElementById('product-filter').addEventListener('change', function() {
+      this.form.submit();
+    });
+    
+    // Date range filtering
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
+    
+    startDateInput.addEventListener('change', function() {
+      if (this.value && endDateInput.value) {
+        this.form.submit();
+      }
+    });
+    
+    endDateInput.addEventListener('change', function() {
+      if (this.value && startDateInput.value) {
+        this.form.submit();
+      }
+    });
+  });
+</script>
+{% endblock %}

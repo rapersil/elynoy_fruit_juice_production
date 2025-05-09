@@ -1,0 +1,172 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}Register | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="text-center my-3">Create Account</h3>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.first_name.id_for_label }}">
+                                    <i class="material-icons align-middle me-1">badge</i>
+                                    First Name
+                                </label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                <div class="invalid-feedback d-block text-danger">
+                                    {{ form.first_name.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.last_name.id_for_label }}">
+                                    <i class="material-icons align-middle me-1">badge</i>
+                                    Last Name
+                                </label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                <div class="invalid-feedback d-block text-danger">
+                                    {{ form.last_name.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.username.id_for_label }}">
+                                    <i class="material-icons align-middle me-1">person</i>
+                                    Username
+                                </label>
+                                {{ form.username }}
+                                {% if form.username.errors %}
+                                <div class="invalid-feedback d-block text-danger">
+                                    {{ form.username.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.email.id_for_label }}">
+                                    <i class="material-icons align-middle me-1">email</i>
+                                    Email
+                                </label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                <div class="invalid-feedback d-block text-danger">
+                                    {{ form.email.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.phone.id_for_label }}">
+                                    <i class="material-icons align-middle me-1">phone</i>
+                                    Phone Number (optional)
+                                </label>
+                                {{ form.phone }}
+                                {% if form.phone.errors %}
+                                <div class="invalid-feedback d-block text-danger">
+                                    {{ form.phone.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.department.id_for_label }}">
+                                    <i class="material-icons align-middle me-1">business</i>
+                                    Department (optional)
+                                </label>
+                                {{ form.department }}
+                                {% if form.department.errors %}
+                                <div class="invalid-feedback d-block text-danger">
+                                    {{ form.department.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.password1.id_for_label }}">
+                                    <i class="material-icons align-middle me-1">lock</i>
+                                    Password
+                                </label>
+                                {{ form.password1 }}
+                                {% if form.password1.errors %}
+                                <div class="invalid-feedback d-block text-danger">
+                                    {{ form.password1.errors }}
+                                </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    Your password must be at least 8 characters and contain letters and numbers.
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.password2.id_for_label }}">
+                                    <i class="material-icons align-middle me-1">lock</i>
+                                    Confirm Password
+                                </label>
+                                {{ form.password2 }}
+                                {% if form.password2.errors %}
+                                <div class="invalid-feedback d-block text-danger">
+                                    {{ form.password2.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mt-4 mb-0 text-center">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="material-icons align-middle me-1">person_add</i>
+                            Create Account
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center py-3">
+                <div class="small">
+                    <a href="{% url 'login' %}">Have an account? Go to login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add Bootstrap classes to form inputs
+        const formControls = document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"], input[type="tel"]');
+        formControls.forEach(input => {
+            input.classList.add('form-control');
+        });
+    });
+</script>
+{% endblock %}

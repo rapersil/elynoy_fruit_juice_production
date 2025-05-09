@@ -1,0 +1,175 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}Sales | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>Sales</h1>
+  <a href="{% url 'sale_new' %}" class="btn btn-primary">
+    <i class="material-icons">add_circle</i> New Sale
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">All Sales</h5>
+      <div>
+        <div class="btn-group" role="group">
+          <button type="button" class="btn btn-sm btn-outline-secondary active">All</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary">Draft</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary">Confirmed</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary">Delivered</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    {% if sales %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Invoice #</th>
+            <th>Customer</th>
+            <th>Sale Date</th>
+            <th>Total Amount</th>
+            <th>Status</th>
+            <th>Payment</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sale in sales %}
+          <tr>
+            <td>
+              <a href="{% url 'sale_detail' sale.id %}">{{ sale.invoice_number }}</a>
+            </td>
+            <td>{{ sale.customer.name }}</td>
+            <td>{{ sale.sale_date }}</td>
+            <td>GHS{{ sale.total_amount|floatformat:2 }}</td>
+            <td>
+              {% if sale.status == 'draft' %}
+              <span class="badge bg-secondary">Draft</span>
+              {% elif sale.status == 'confirmed' %}
+              <span class="badge bg-primary">Confirmed</span>
+              {% elif sale.status == 'shipped' %}
+              <span class="badge bg-info">Shipped</span>
+              {% elif sale.status == 'delivered' %}
+              <span class="badge bg-success">Delivered</span>
+              {% else %}
+              <span class="badge bg-danger">Cancelled</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if sale.payment_status == 'pending' %}
+              <span class="badge bg-warning">Pending</span>
+              {% elif sale.payment_status == 'partial' %}
+              <span class="badge bg-info">Partial</span>
+              {% elif sale.payment_status == 'paid' %}
+              <span class="badge bg-success">Paid</span>
+              {% else %}
+              <span class="badge bg-danger">Cancelled</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="btn-group">
+                <a href="{% url 'sale_detail' sale.id %}" class="btn btn-sm btn-outline-primary">
+                  <i class="material-icons" style="font-size: 16px;">visibility</i>
+                </a>
+                {% if sale.status == 'draft' %}
+                <a href="{% url 'sale_edit' sale.id %}" class="btn btn-sm btn-outline-secondary">
+                  <i class="material-icons" style="font-size: 16px;">edit</i>
+                </a>
+                <a href="{% url 'sale_confirm' sale.id %}" class="btn btn-sm btn-outline-success">
+                  <i class="material-icons" style="font-size: 16px;">check_circle</i>
+                </a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <i class="material-icons" style="font-size: 48px; color: var(--color-200);">receipt_long</i>
+      <p class="mt-3 text-muted">No sales found</p>
+      <a href="{% url 'sale_new' %}" class="btn btn-primary mt-2">Create First Sale</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="material-icons align-middle me-1" style="font-size: 20px;">trending_up</i>
+          Sales Summary
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="text-center mb-3">
+              <h6 class="text-muted">Total Sales (This Month)</h6>
+              <h2 class="mb-0">GHS{{ total_month|floatformat:2 }}</h2>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-center mb-3">
+              <h6 class="text-muted">Pending Payments</h6>
+              <h2 class="mb-0">GHS{{ pending_payments|floatformat:2 }}</h2>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="material-icons align-middle me-1" style="font-size: 20px;">people</i>
+          Top Customers
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if top_customers %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Sales</th>
+                <th>Total Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for customer in top_customers %}
+              <tr>
+                <td>
+                  <a href="{% url 'customer_detail' customer.id %}">{{ customer.name }}</a>
+                </td>
+                <td>{{ customer.sale_count }}</td>
+                <td>GHS{{ customer.total_sales|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No customer data available</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

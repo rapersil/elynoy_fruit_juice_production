@@ -1,0 +1,348 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}Inventory Report | Fruit Juice Production{% endblock %}
+
+{% block extra_css %}
+<style>
+  .report-card {
+    transition: all 0.2s ease;
+  }
+  
+  .report-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .inventory-status {
+    width: 12px;
+    height: 12px;
+    display: inline-block;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+  
+  .status-good {
+    background-color: var(--success);
+  }
+  
+  .status-warning {
+    background-color: var(--warning);
+  }
+  
+  .status-critical {
+    background-color: var(--danger);
+  }
+  
+  .report-filters {
+    background-color: var(--color-50);
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1>Inventory Report</h1>
+    <p class="text-muted">Comprehensive view of current inventory status and valuation</p>
+  </div>
+  <div>
+    <div class="dropdown d-inline-block me-2">
+      <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="material-icons align-middle">file_download</i> Export
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="exportDropdown">
+        <li><a class="dropdown-item" href="#"><i class="material-icons align-middle me-2" style="font-size: 16px;">description</i> PDF</a></li>
+        <li><a class="dropdown-item" href="#"><i class="material-icons align-middle me-2" style="font-size: 16px;">table_chart</i> Excel</a></li>
+        <li><a class="dropdown-item" href="#"><i class="material-icons align-middle me-2" style="font-size: 16px;">print</i> Print</a></li>
+      </ul>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-primary">
+      <i class="material-icons align-middle">dashboard</i> Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="report-filters">
+  <form method="get" class="mb-0">
+    <div class="row align-items-end">
+      <div class="col-md-3">
+        <div class="form-group mb-md-0 mb-3">
+          <label for="inventory_type" class="form-label">Inventory Type</label>
+          <select id="inventory_type" name="type" class="form-select">
+            <option value="all" {% if inventory_type == 'all' %}selected{% endif %}>All Inventory</option>
+            <option value="raw_materials" {% if inventory_type == 'raw_materials' %}selected{% endif %}>Raw Materials</option>
+            <option value="products" {% if inventory_type == 'products' %}selected{% endif %}>Finished Products</option>
+          </select>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="form-group mb-md-0 mb-3">
+          <label for="status_filter" class="form-label">Stock Status</label>
+          <select id="status_filter" name="status" class="form-select">
+            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Status</option>
+            <option value="in_stock" {% if status_filter == 'in_stock' %}selected{% endif %}>In Stock</option>
+            <option value="low_stock" {% if status_filter == 'low_stock' %}selected{% endif %}>Low Stock</option>
+            <option value="out_of_stock" {% if status_filter == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
+          </select>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="form-group mb-md-0 mb-3">
+          <label for="sort_by" class="form-label">Sort By</label>
+          <select id="sort_by" name="sort" class="form-select">
+            <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+            <option value="stock_level" {% if sort_by == 'stock_level' %}selected{% endif %}>Stock Level</option>
+            <option value="value" {% if sort_by == 'value' %}selected{% endif %}>Value</option>
+          </select>
+        </div>
+      </div>
+      <div class="col-md-3 text-md-end">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="material-icons align-middle me-1">filter_list</i> Apply Filters
+        </button>
+        <a href="{% url 'inventory_report' %}" class="btn btn-outline-secondary">Reset</a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Inventory Summary Cards -->
+<div class="row mb-4">
+  <div class="col-md-4 mb-3">
+    <div class="card report-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="text-muted mb-1">Raw Materials Inventory</h6>
+            <h2 class="mb-0">GHS{{ raw_materials_value|floatformat:2 }}</h2>
+            <p class="text-muted mb-0">{{ raw_materials_count }} unique materials</p>
+          </div>
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">inventory</i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4 mb-3">
+    <div class="card report-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="text-muted mb-1">Finished Products Inventory</h6>
+            <h2 class="mb-0">GHS{{ products_value|floatformat:2 }}</h2>
+            <p class="text-muted mb-0">{{ products_count }} unique products</p>
+          </div>
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">local_drink</i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4 mb-3">
+    <div class="card report-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="text-muted mb-1">Total Inventory Value</h6>
+            <h2 class="mb-0">GHS{{ total_inventory_value|floatformat:2 }}</h2>
+            <p class="text-muted mb-0">As of {{ report_date }}</p>
+          </div>
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">savings</i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Inventory Details</h5>
+        <div class="d-flex align-items-center">
+          <div class="me-3">
+            <span class="inventory-status status-good"></span> Normal
+          </div>
+          <div class="me-3">
+            <span class="inventory-status status-warning"></span> Low
+          </div>
+          <div>
+            <span class="inventory-status status-critical"></span> Critical
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        {% if inventory_items %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Current Stock</th>
+                <th>Reorder Level</th>
+                <th>Unit Cost</th>
+                <th>Total Value</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in inventory_items %}
+              <tr>
+                <td>
+                  {% if item.type == 'raw_material' %}
+                  <a href="{% url 'raw_material_detail' item.id %}">{{ item.name }}</a>
+                  {% else %}
+                  <a href="{% url 'product_detail' item.id %}">{{ item.name }}</a>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if item.type == 'raw_material' %}
+                  <span class="badge bg-secondary">Raw Material</span>
+                  {% else %}
+                  <span class="badge" style="background-color: var(--color-600);">Product</span>
+                  {% endif %}
+                </td>
+                <td>{{ item.stock_quantity }} {{ item.unit }}</td>
+                <td>{{ item.reorder_level }} {{ item.unit }}</td>
+                <td>GHS{{ item.unit_cost|floatformat:2 }}</td>
+                <td>GHS{{ item.total_value|floatformat:2 }}</td>
+                <td>
+                  {% if item.status == 'critical' %}
+                  <span class="inventory-status status-critical"></span> Critical
+                  {% elif item.status == 'low' %}
+                  <span class="inventory-status status-warning"></span> Low
+                  {% else %}
+                  <span class="inventory-status status-good"></span> Normal
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No inventory items match your filter criteria</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Inventory Value Distribution</h5>
+      </div>
+      <div class="card-body">
+        <div style="height: 250px;">
+          <canvas id="inventoryValueChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Low Stock Items</h5>
+      </div>
+      <div class="card-body p-0">
+        {% if low_stock_items %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Current</th>
+                <th>Reorder</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in low_stock_items %}
+              <tr>
+                <td>{{ item.name }}</td>
+                <td class="text-danger fw-bold">{{ item.stock_quantity }}</td>
+                <td>{{ item.reorder_level }}</td>
+                <td>
+                  {% if item.type == 'raw_material' %}
+                  <a href="#" class="btn btn-sm btn-outline-primary">
+                    <i class="material-icons" style="font-size: 14px;">shopping_cart</i> Order
+                  </a>
+                  {% else %}
+                  <a href="#" class="btn btn-sm btn-outline-primary">
+                    <i class="material-icons" style="font-size: 14px;">science</i> Produce
+                  </a>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No low stock items found</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Get CSS variables for chart colors
+    const style = getComputedStyle(document.documentElement);
+    const colorPrimary = style.getPropertyValue('--color-600');
+    const colorSecondary = style.getPropertyValue('--color-300');
+    
+    // Inventory Value Distribution Chart
+    const inventoryCtx = document.getElementById('inventoryValueChart').getContext('2d');
+    const inventoryValueChart = new Chart(inventoryCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Raw Materials', 'Finished Products'],
+        datasets: [
+          {
+            data: [{{ raw_materials_value }}, {{ products_value }}],
+            backgroundColor: [
+              colorSecondary,
+              colorPrimary
+            ],
+            borderWidth: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            }
+          }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

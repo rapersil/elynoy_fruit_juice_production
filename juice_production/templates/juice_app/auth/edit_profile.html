@@ -1,0 +1,146 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}Edit Profile | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0">
+                    <i class="material-icons align-middle me-2">edit</i>
+                    Edit Profile
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <h5 class="mb-3">Personal Information</h5>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ user_form.first_name.id_for_label }}">
+                                    <i class="material-icons align-middle me-1">badge</i>
+                                    First Name
+                                </label>
+                                {{ user_form.first_name }}
+                                {% if user_form.first_name.errors %}
+                                <div class="invalid-feedback d-block text-danger">
+                                    {{ user_form.first_name.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ user_form.last_name.id_for_label }}">
+                                    <i class="material-icons align-middle me-1">badge</i>
+                                    Last Name
+                                </label>
+                                {{ user_form.last_name }}
+                                {% if user_form.last_name.errors %}
+                                <div class="invalid-feedback d-block text-danger">
+                                    {{ user_form.last_name.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ user_form.username.id_for_label }}">
+                                    <i class="material-icons align-middle me-1">person</i>
+                                    Username
+                                </label>
+                                {{ user_form.username }}
+                                {% if user_form.username.errors %}
+                                <div class="invalid-feedback d-block text-danger">
+                                    {{ user_form.username.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ user_form.email.id_for_label }}">
+                                    <i class="material-icons align-middle me-1">email</i>
+                                    Email
+                                </label>
+                                {{ user_form.email }}
+                                {% if user_form.email.errors %}
+                                <div class="invalid-feedback d-block text-danger">
+                                    {{ user_form.email.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    <h5 class="mb-3">Profile Information</h5>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ profile_form.phone.id_for_label }}">
+                                    <i class="material-icons align-middle me-1">phone</i>
+                                    Phone Number
+                                </label>
+                                {{ profile_form.phone }}
+                                {% if profile_form.phone.errors %}
+                                <div class="invalid-feedback d-block text-danger">
+                                    {{ profile_form.phone.errors }}
+                                </div>
+                                {% endif %}
+                                <small class="form-text text-muted">Format: +1XXXXXXXXXX</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ profile_form.department.id_for_label }}">
+                                    <i class="material-icons align-middle me-1">business</i>
+                                    Department
+                                </label>
+                                {{ profile_form.department }}
+                                {% if profile_form.department.errors %}
+                                <div class="invalid-feedback d-block text-danger">
+                                    {{ profile_form.department.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mt-4 mb-0 text-center">
+                        <a href="{% url 'user_profile' %}" class="btn btn-outline-secondary me-2">
+                            <i class="material-icons align-middle me-1">arrow_back</i>
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="material-icons align-middle me-1">save</i>
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add Bootstrap classes to form inputs
+        const formControls = document.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"]');
+        formControls.forEach(input => {
+            input.classList.add('form-control');
+        });
+    });
+</script>
+{% endblock %}

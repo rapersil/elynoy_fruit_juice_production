@@ -1,0 +1,422 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}Production Report | Fruit Juice Production{% endblock %}
+
+{% block extra_css %}
+<style>
+  .date-range-selector {
+    background-color: var(--color-50);
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .metric-card {
+    transition: all 0.2s ease;
+  }
+  
+  .metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .status-indicator {
+    width: 10px;
+    height: 10px;
+    display: inline-block;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1>Production Report</h1>
+    <p class="text-muted">Analyze production efficiency and trends over time</p>
+  </div>
+  <div>
+    <div class="dropdown d-inline-block me-2">
+      <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="material-icons align-middle">file_download</i> Export
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="exportDropdown">
+        <li><a class="dropdown-item" href="#"><i class="material-icons align-middle me-2" style="font-size: 16px;">description</i> PDF</a></li>
+        <li><a class="dropdown-item" href="#"><i class="material-icons align-middle me-2" style="font-size: 16px;">table_chart</i> Excel</a></li>
+        <li><a class="dropdown-item" href="#"><i class="material-icons align-middle me-2" style="font-size: 16px;">print</i> Print</a></li>
+      </ul>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-primary">
+      <i class="material-icons align-middle">dashboard</i> Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="date-range-selector">
+  <form method="get" class="mb-0">
+    <div class="row align-items-end">
+      <div class="col-md-3">
+        <div class="form-group mb-md-0 mb-3">
+          <label for="start_date" class="form-label">Start Date</label>
+          <input type="date" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" class="form-control">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="form-group mb-md-0 mb-3">
+          <label for="end_date" class="form-label">End Date</label>
+          <input type="date" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" class="form-control">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="form-group mb-md-0 mb-3">
+          <label for="product_filter" class="form-label">Product</label>
+          <select id="product_filter" name="product" class="form-select">
+            <option value="all">All Products</option>
+            {% for product in all_products %}
+            <option value="{{ product.id }}" {% if selected_product == product.id %}selected{% endif %}>{{ product.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="col-md-3 text-md-end">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="material-icons align-middle me-1">date_range</i> Apply Range
+        </button>
+        <a href="{% url 'production_report' %}" class="btn btn-outline-secondary">Reset</a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Production Metrics -->
+<div class="row mb-4">
+  <div class="col-md-3 mb-3">
+    <div class="card metric-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="text-muted mb-1">Total Production</h6>
+            <h2 class="mb-0">{{ total_production }}</h2>
+            <p class="text-muted mb-0">Units produced</p>
+          </div>
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">science</i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="card metric-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="text-muted mb-1">Production Batches</h6>
+            <h2 class="mb-0">{{ batch_count }}</h2>
+            <p class="text-muted mb-0">Total batches</p>
+          </div>
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">batch_prediction</i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="card metric-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="text-muted mb-1">Efficiency</h6>
+            <h2 class="mb-0">{{ efficiency_percentage|floatformat:1 }}%</h2>
+            <p class="text-muted mb-0">Actual vs planned</p>
+          </div>
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">speed</i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="card metric-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="text-muted mb-1">Quality Rate</h6>
+            <h2 class="mb-0">{{ quality_rate|floatformat:1 }}%</h2>
+            <p class="text-muted mb-0">Pass rate</p>
+          </div>
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">verified</i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-8">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Production Trend</h5>
+      </div>
+      <div class="card-body">
+        <div style="height: 300px;">
+          <canvas id="productionTrendChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Production Batches</h5>
+        <a href="{% url 'production_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="card-body p-0">
+        {% if batches %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Batch Number</th>
+                <th>Product</th>
+                <th>Date</th>
+                <th>Planned</th>
+                <th>Actual</th>
+                <th>Efficiency</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for batch in batches %}
+              <tr>
+                <td>
+                  <a href="{% url 'production_detail' batch.id %}">{{ batch.batch_number }}</a>
+                </td>
+                <td>{{ batch.product.name }}</td>
+                <td>{{ batch.production_date }}</td>
+                <td>{{ batch.planned_quantity }}</td>
+                <td>{{ batch.actual_quantity_produced|default:"-" }}</td>
+                <td>
+                  {% if batch.actual_quantity_produced %}
+                  {% with efficiency=batch.actual_quantity_produced|floatformat:0|stringformat:"i"|add:"0"|multiply:100|divide:batch.planned_quantity|floatformat:0|stringformat:"i" %}
+                  <div class="progress" style="height: 8px; width: 80px;">
+                    <div class="progress-bar 
+                      {% if efficiency >= 95 %}bg-success
+                      {% elif efficiency >= 80 %}bg-warning
+                      {% else %}bg-danger{% endif %}" 
+                      role="progressbar" 
+                      style="width: {{ efficiency }}%;" 
+                      aria-valuenow="{{ efficiency }}" 
+                      aria-valuemin="0" 
+                      aria-valuemax="100">
+                    </div>
+                  </div>
+                  <small class="text-muted">{{ efficiency }}%</small>
+                  {% endwith %}
+                  {% else %}
+                  <span class="text-muted">-</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if batch.status == 'completed' %}
+                  <span class="badge bg-success">Completed</span>
+                  {% elif batch.status == 'in_progress' %}
+                  <span class="badge bg-warning">In Progress</span>
+                  {% elif batch.status == 'planned' %}
+                  <span class="badge bg-info">Planned</span>
+                  {% else %}
+                  <span class="badge bg-danger">Cancelled</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No production batches in the selected period</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Production by Product</h5>
+      </div>
+      <div class="card-body">
+        <div style="height: 300px;">
+          <canvas id="productionByProductChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Material Consumption</h5>
+      </div>
+      <div class="card-body p-0">
+        {% if material_consumption %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Material</th>
+                <th>Consumed</th>
+                <th>Waste</th>
+                <th>Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for material in material_consumption %}
+              <tr>
+                <td>{{ material.name }}</td>
+                <td>{{ material.quantity_used }} {{ material.unit }}</td>
+                <td>{{ material.waste_quantity }} {{ material.unit }}</td>
+                <td>GHS{{ material.total_cost|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No material consumption data available</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Get CSS variables for chart colors
+    const style = getComputedStyle(document.documentElement);
+    const colorPrimary = style.getPropertyValue('--color-600');
+    const colorSecondary = style.getPropertyValue('--color-300');
+    
+    // Production Trend Chart
+    const trendCtx = document.getElementById('productionTrendChart').getContext('2d');
+    const productionTrendChart = new Chart(trendCtx, {
+      type: 'line',
+      data: {
+        labels: {{ trend_dates|safe }},
+        datasets: [
+          {
+            label: 'Planned Production',
+            data: {{ planned_quantities|safe }},
+            borderColor: colorSecondary,
+            backgroundColor: 'rgba(200, 68, 58, 0.1)',
+            borderWidth: 2,
+            fill: false,
+            tension: 0.4
+          },
+          {
+            label: 'Actual Production',
+            data: {{ actual_quantities|safe }},
+            borderColor: colorPrimary,
+            backgroundColor: 'rgba(200, 68, 58, 0.2)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Units',
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Date',
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Production by Product Chart
+    const byProductCtx = document.getElementById('productionByProductChart').getContext('2d');
+    const productionByProductChart = new Chart(byProductCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ product_names|safe }},
+        datasets: [
+          {
+            label: 'Units Produced',
+            data: {{ product_quantities|safe }},
+            backgroundColor: 'rgba(200, 68, 58, 0.7)',
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Units Produced',
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            }
+          },
+          x: {
+            ticks: {
+              maxRotation: 45,
+              minRotation: 45
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

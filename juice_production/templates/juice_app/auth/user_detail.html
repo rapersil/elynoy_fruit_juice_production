@@ -1,0 +1,228 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}{{ user.username }} | User Details | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1>User Details</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'user_list' %}">Users</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ user.username }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div>
+        {% if request.user.profile.role == 'superadmin' %}
+        <a href="{% url 'change_user_role' user.id %}" class="btn btn-primary">
+            <i class="material-icons align-middle me-1">manage_accounts</i>
+            Change Role
+        </a>
+        {% endif %}
+        
+        {% if user.is_active %}
+        <a href="{% url 'toggle_user_status' user.id %}" class="btn btn-outline-danger">
+            <i class="material-icons align-middle me-1">block</i>
+            Disable Account
+        </a>
+        {% else %}
+        <a href="{% url 'toggle_user_status' user.id %}" class="btn btn-outline-success">
+            <i class="material-icons align-middle me-1">check_circle</i>
+            Enable Account
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="material-icons align-middle me-1">person</i>
+                    User Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div style="width: 100px; height: 100px; background-color: 
+                        {% if user.profile.role == 'superadmin' %}var(--danger)
+                        {% elif user.profile.role == 'admin' %}var(--warning)
+                        {% else %}var(--color-600){% endif %}; 
+                        border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                        <i class="material-icons" style="font-size: 60px; color: white;">account_circle</i>
+                    </div>
+                    <h3 class="mt-3">{{ user.get_full_name }}</h3>
+                    <p class="text-muted">{{ user.username }}</p>
+                    
+                    {% if user.profile.role == 'superadmin' %}
+                    <span class="badge bg-danger">Super Admin</span>
+                    {% elif user.profile.role == 'admin' %}
+                    <span class="badge bg-warning">Admin</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Staff</span>
+                    {% endif %}
+                    
+                    {% if user.is_active %}
+                    <span class="badge bg-success">Active</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                </div>
+                
+                <table class="table">
+                    <tr>
+                        <th><i class="material-icons align-middle me-1">email</i> Email</th>
+                        <td>{{ user.email }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="material-icons align-middle me-1">phone</i> Phone</th>
+                        <td>{{ user.profile.phone|default:"Not provided" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="material-icons align-middle me-1">business</i> Department</th>
+                        <td>{{ user.profile.department|default:"Not specified" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="material-icons align-middle me-1">event</i> Date Joined</th>
+                        <td>{{ user.date_joined|date:"F j, Y" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="material-icons align-middle me-1">login</i> Last Login</th>
+                        <td>{{ user.last_login|date:"F j, Y" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="material-icons align-middle me-1">history</i>
+                    Activity History
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if user_activities %}
+                <div class="list-group">
+                    {% for activity in user_activities %}
+                    <div class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ activity.title }}</h6>
+                            <small>{{ activity.timestamp|date:"F j, Y" }}</small>
+                        </div>
+                        <p class="mb-1">{{ activity.description }}</p>
+                        <small class="text-muted">
+                            <i class="material-icons align-text-bottom" style="font-size: 14px;">{{ activity.icon }}</i>
+                            {{ activity.category }}
+                        </small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="material-icons" style="font-size: 48px; color: var(--color-200);">history</i>
+                    <p class="mt-3 text-muted">No activity history found</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="material-icons align-middle me-1">security</i>
+                    Security & Permissions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">User Role</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    {% if user.profile.role == 'superadmin' %}
+                                    <i class="material-icons align-middle me-2" style="font-size: 28px; color: var(--danger);">security</i>
+                                    <div>
+                                        <h5 class="mb-1">Super Admin</h5>
+                                        <p class="text-muted mb-0">Full system access, including role management</p>
+                                    </div>
+                                    {% elif user.profile.role == 'admin' %}
+                                    <i class="material-icons align-middle me-2" style="font-size: 28px; color: var(--warning);">admin_panel_settings</i>
+                                    <div>
+                                        <h5 class="mb-1">Admin</h5>
+                                        <p class="text-muted mb-0">User management and reports</p>
+                                    </div>
+                                    {% else %}
+                                    <i class="material-icons align-middle me-2" style="font-size: 28px; color: var(--secondary);">person</i>
+                                    <div>
+                                        <h5 class="mb-1">Staff</h5>
+                                        <p class="text-muted mb-0">Standard system access</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if request.user.profile.role == 'superadmin' %}
+                                <div class="mt-3">
+                                    <a href="{% url 'change_user_role' user.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="material-icons align-middle">edit</i>
+                                        Change Role
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Account Status</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    {% if user.is_active %}
+                                    <i class="material-icons align-middle me-2" style="font-size: 28px; color: var(--success);">check_circle</i>
+                                    <div>
+                                        <h5 class="mb-1">Active</h5>
+                                        <p class="text-muted mb-0">User can log in and use the system</p>
+                                    </div>
+                                    {% else %}
+                                    <i class="material-icons align-middle me-2" style="font-size: 28px; color: var(--secondary);">cancel</i>
+                                    <div>
+                                        <h5 class="mb-1">Inactive</h5>
+                                        <p class="text-muted mb-0">User cannot log in to the system</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mt-3">
+                                    {% if user.is_active %}
+                                    <a href="{% url 'toggle_user_status' user.id %}" class="btn btn-sm btn-outline-danger">
+                                        <i class="material-icons align-middle">block</i>
+                                        Disable Account
+                                    </a>
+                                    {% else %}
+                                    <a href="{% url 'toggle_user_status' user.id %}" class="btn btn-sm btn-outline-success">
+                                        <i class="material-icons align-middle">check_circle</i>
+                                        Enable Account
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

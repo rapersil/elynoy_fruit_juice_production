@@ -1,0 +1,134 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}
+  {% if bottle %}Edit {{ bottle.size }}{% else %}New Bottle Size{% endif %} | Fruit Juice Production
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>{% if product %}Edit Product{% else %}New Product{% endif %}</h1>
+  <a href="{% url 'product_list' %}" class="btn btn-outline-secondary">
+    <i class="material-icons">arrow_back</i> Back to List
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">{% if bottle %}Edit {{ bottle.size }}{% else %}Create New Bottle Size{% endif %}</h5>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      
+      <h5 class="mb-3">Basic Information</h5>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.name.id_for_label }}">Product Name <span class="text-danger">*</span></label>
+            {{ form.name }}
+            {% if form.name.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.name.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+         <div class="col-md-6">
+          {% if product %}
+          <!-- Display SKU as read-only when editing -->
+          <div class="form-group mb-3">
+            <label>SKU</label>
+            <input type="text" class="form-control read-only-field" value="{{ sku_display }}" readonly>
+            <small class="form-text text-muted">SKU is automatically generated and cannot be changed</small>
+          </div>
+          {% else %}
+          <!-- No SKU field when creating - will be auto-generated -->
+          <div class="form-group mb-3">
+            <label>SKU</label>
+            <input type="text" class="form-control read-only-field" value="Will be generated automatically" readonly disabled>
+            <small class="form-text text-muted">SKU will be generated based on bottle size</small>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="form-group mb-3">
+        <label for="{{ form.description.id_for_label }}">Description</label>
+        {{ form.description }}
+        {% if form.description.errors %}
+        <div class="invalid-feedback d-block">
+          {{ form.description.errors }}
+        </div>
+        {% endif %}
+      </div>
+       <div class="row">
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.bottle.id_for_label }}">Bottle Size <span class="text-danger">*</span></label>
+            {{ form.bottle }}
+            {% if form.bottle.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.bottle.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.markup_percentage.id_for_label }}">Markup Percentage (%)</label>
+            {{ form.markup_percentage }}
+            {% if form.markup_percentage.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.markup_percentage.errors }}
+            </div>
+            {% endif %}
+            <small class="form-text text-muted">Range: 0-200%</small>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group mb-3">
+        <div class="form-check">
+          {{ form.is_active }}
+          <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+            Active
+          </label>
+          {% if form.is_active.errors %}
+          <div class="invalid-feedback d-block">
+            {{ form.is_active.errors }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-end mt-4">
+        <a href="{% url 'bottle_list' %}" class="btn btn-outline-secondary me-2">
+          Cancel
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="material-icons">save</i>
+          {% if bottle %}Update{% else %}Create{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap classes to form inputs
+    document.querySelectorAll('input[type="text"], textarea').forEach(function(el) {
+      el.classList.add('form-control');
+    });
+    
+    document.querySelectorAll('input[type="checkbox"]').forEach(function(el) {
+      el.classList.add('form-check-input');
+    });
+  });
+</script>
+{% endblock %}

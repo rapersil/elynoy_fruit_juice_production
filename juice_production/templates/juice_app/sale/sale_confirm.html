@@ -1,0 +1,125 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}Confirm Sale {{ sale.invoice_number }} | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>Confirm Sale</h1>
+  <a href="{% url 'sale_detail' sale.id %}" class="btn btn-outline-secondary">
+    <i class="material-icons">arrow_back</i> Back to Sale
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header bg-primary text-white">
+    <h5 class="mb-0">
+      <i class="material-icons align-middle me-1">check_circle</i>
+      Confirm Sale
+    </h5>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info">
+      <p class="mb-0">You are about to confirm sale <strong>{{ sale.invoice_number }}</strong>. This will update inventory levels by reducing stock quantities for the products being sold.</p>
+    </div>
+    
+    <div class="mb-4">
+      <h6>Sale Details:</h6>
+      <table class="table">
+        <tr>
+          <th style="width: 30%;">Invoice Number:</th>
+          <td>{{ sale.invoice_number }}</td>
+        </tr>
+        <tr>
+          <th>Customer:</th>
+          <td>{{ sale.customer.name }}</td>
+        </tr>
+        <tr>
+          <th>Sale Date:</th>
+          <td>{{ sale.sale_date }}</td>
+        </tr>
+        <tr>
+          <th>Total Amount:</th>
+          <td>GHS{{ sale.total_amount|floatformat:2 }}</td>
+        </tr>
+        <tr>
+          <th>Current Status:</th>
+          <td>
+            <span class="badge bg-secondary">Draft</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+    
+    <h6>Items:</h6>
+    <div class="table-responsive mb-4">
+      <table class="table table-bordered">
+        <thead class="bg-light">
+          <tr>
+            <th>Product</th>
+            <th>Quantity</th>
+            <th>Current Stock</th>
+            <th>Remaining Stock</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ item.product.name }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ item.product.stock_quantity }}</td>
+            <td>
+              {{ item.product.stock_quantity|subtract:item.quantity }}
+            </td>
+            <td>
+              {% if item.product.stock_quantity >= item.quantity %}
+              <span class="badge bg-success">Available</span>
+              {% else %}
+              <span class="badge bg-danger">Insufficient Stock</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    
+    {% if insufficient_stock %}
+    <div class="alert alert-danger mb-4">
+      <h6 class="fw-bold">Insufficient Stock</h6>
+      <p>The following products do not have sufficient stock to fulfill this order:</p>
+      <ul>
+        {% for item in insufficient_stock %}
+        <li>{{ item.product.name }}: Need {{ item.quantity }}, Have {{ item.product.stock_quantity }}</li>
+        {% endfor %}
+      </ul>
+      <p class="mb-0">Please adjust the quantities or restock these products before confirming the sale.</p>
+    </div>
+    {% endif %}
+    
+    <div class="mb-4">
+      <h6>What will happen:</h6>
+      <ul>
+        <li>The sale status will be changed to "Confirmed"</li>
+        <li>Product stock quantities will be reduced accordingly</li>
+        <li>The sale will be finalized and can no longer be edited</li>
+      </ul>
+    </div>
+    
+    <form method="post" class="mt-4">
+      {% csrf_token %}
+      <div class="d-flex justify-content-end">
+        <a href="{% url 'sale_detail' sale.id %}" class="btn btn-outline-secondary me-2">
+          <i class="material-icons">arrow_back</i>
+          Cancel
+        </a>
+        <button type="submit" class="btn btn-success" {% if insufficient_stock %}disabled{% endif %}>
+          <i class="material-icons">check_circle</i>
+          Confirm Sale
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

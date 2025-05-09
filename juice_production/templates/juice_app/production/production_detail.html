@@ -1,0 +1,246 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Batch {{ batch.batch_number }} | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1>Batch: {{ batch.batch_number }}</h1>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'production_list' %}">Production</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ batch.batch_number }}</li>
+      </ol>
+    </nav>
+  </div>
+  <div>
+    {% if batch.status == 'planned' and batch.produced_by == request.user or request.user.profile.role in 'admin,superadmin'|split:',' %}
+    <a href="{% url 'production_edit' batch.id %}" class="btn btn-primary">
+      <i class="material-icons">edit</i> Edit
+    </a>
+    <a href="{% url 'production_start' batch.id %}" class="btn btn-success">
+      <i class="material-icons">play_arrow</i> Start Production
+    </a>
+    {% elif batch.status == 'in_progress' and batch.produced_by == request.user or request.user.profile.role in 'admin,superadmin'|split:',' %}
+    <a href="{% url 'production_complete' batch.id %}" class="btn btn-info">
+      <i class="material-icons">task_alt</i> Complete
+    </a>
+    {% endif %}
+    
+    {% if batch.status != 'completed' and batch.status != 'cancelled' and batch.produced_by == request.user or request.user.profile.role in 'admin,superadmin'|split:',' %}
+    <a href="{% url 'production_cancel' batch.id %}" class="btn btn-outline-danger">
+      <i class="material-icons">cancel</i> Cancel
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Batch Details</h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="d-flex align-items-center">
+            <div style="width: 60px; height: 60px; border-radius: 50%; background-color: 
+              {% if batch.status == 'completed' %}var(--success)
+              {% elif batch.status == 'in_progress' %}var(--warning)
+              {% elif batch.status == 'planned' %}var(--info)
+              {% else %}var(--danger){% endif %};
+              display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+              <i class="material-icons" style="font-size: 32px; color: white;">
+                {% if batch.status == 'completed' %}check_circle{% elif batch.status == 'in_progress' %}hourglass_top
+                {% elif batch.status == 'planned' %}schedule{% else %}cancel{% endif %}
+              </i>
+            </div>
+            <div>
+              <h4 class="mb-1">{{ batch.product.name }}</h4>
+              <span class="badge 
+                {% if batch.status == 'completed' %}bg-success
+                {% elif batch.status == 'in_progress' %}bg-warning
+                {% elif batch.status == 'planned' %}bg-info
+                {% else %}bg-danger{% endif %}">
+                {{ batch.status|title }}
+              </span>
+              
+              {% if batch.quality_check_passed is not None %}
+                {% if batch.quality_check_passed %}
+                <span class="badge bg-success">QC Passed</span>
+                {% else %}
+                <span class="badge bg-danger">QC Failed</span>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        
+        <table class="table">
+          <tr>
+            <th style="width: 40%;">Batch Number</th>
+            <td>{{ batch.batch_number }}</td>
+          </tr>
+          <tr>
+            <th>Product</th>
+            <td>{{ batch.product.name }} ({{ batch.product.sku }})</td>
+          </tr>
+          <tr>
+            <th>Bottle Size</th>
+            <td>{{ batch.product.bottle.size }}</td>
+          </tr>
+          <tr>
+            <th>Planned Quantity</th>
+            <td>{{ batch.planned_quantity }} units</td>
+          </tr>
+          <tr>
+            <th>Actual Quantity</th>
+            <td>{{ batch.actual_quantity_produced|default:"Not completed" }}</td>
+          </tr>
+          <tr>
+            <th>Production Date</th>
+            <td>{{ batch.production_date }}</td>
+          </tr>
+          <tr>
+            <th>Completion Date</th>
+            <td>{{ batch.completion_date|default:"Not completed" }}</td>
+          </tr>
+          <tr>
+            <th>Quality Check</th>
+            <td>
+              {% if batch.quality_check_passed == True %}
+              <span class="text-success"><i class="material-icons align-middle">check_circle</i> Passed</span>
+              {% elif batch.quality_check_passed == False %}
+              <span class="text-danger"><i class="material-icons align-middle">cancel</i> Failed</span>
+              {% else %}
+              <span class="text-muted">Not checked</span>
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th>Produced By</th>
+            <td>{{ batch.produced_by|default:"Not assigned" }}</td>
+          </tr>
+        </table>
+        
+        {% if batch.notes %}
+        <div class="mt-3">
+          <h6>Notes:</h6>
+          <p>{{ batch.notes }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Material Usage</h5>
+      </div>
+      <div class="card-body p-0">
+        {% if material_usages %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Material</th>
+                <th>Planned</th>
+                <th>Actual</th>
+                <th>Waste</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for usage in material_usages %}
+              <tr>
+                <td>
+                  <a href="{% url 'raw_material_detail' usage.raw_material.id %}">
+                    {{ usage.raw_material.name }}
+                  </a>
+                  <br>
+                  <small class="text-muted">{{ usage.raw_material.unit }}</small>
+                </td>
+                <td>{{ usage.planned_quantity }}</td>
+                <td>
+                  {% if usage.actual_quantity_used %}
+                  {{ usage.actual_quantity_used }}
+                  {% else %}
+                  <span class="text-muted">-</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if usage.waste_quantity %}
+                  {{ usage.waste_quantity }}
+                  {% else %}
+                  <span class="text-muted">0</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No materials defined for this batch</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    {% if batch.status == 'completed' %}
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Production Summary</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="text-center mb-3">
+              <h6 class="text-muted">Efficiency</h6>
+              <h2 class="mb-0">
+                {% if batch.planned_quantity and batch.actual_quantity_produced %}
+                {{ batch.actual_quantity_produced|floatformat:0 }}/{{ batch.planned_quantity|floatformat:0 }}
+                {% else %}
+                -
+                {% endif %}
+              </h2>
+              <p>
+                {% if batch.planned_quantity and batch.actual_quantity_produced %}
+                {% with efficiency=batch.actual_quantity_produced|multiply:100|divide:batch.planned_quantity|floatformat:1 %}
+                <span class="badge 
+                  {% if efficiency >= 95 %}bg-success
+                  {% elif efficiency >= 80 %}bg-warning
+                  {% else %}bg-danger{% endif %}">
+                  {{ efficiency }}%
+                </span>
+                {% endwith %}
+                {% else %}
+                -
+                {% endif %}
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-center mb-3">
+              <h6 class="text-muted">Total Material Cost</h6>
+              <h2 class="mb-0">${{ batch.total_material_cost|floatformat:2 }}</h2>
+              <p>
+                {% if batch.actual_quantity_produced %}
+                Cost per unit: ${{ batch.total_material_cost|divide:batch.actual_quantity_produced|floatformat:2 }}
+                {% else %}
+                -
+                {% endif %}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

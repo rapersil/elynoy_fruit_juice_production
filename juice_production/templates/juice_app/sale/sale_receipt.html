@@ -1,0 +1,229 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Receipt: {{ sale.invoice_number }} | Fruit Juice Production{% endblock %}
+
+{% block extra_css %}
+<style>
+  @media print {
+    /* Hide navigation elements when printing */
+    nav, .footer, .btn, .no-print {
+      display: none !important;
+    }
+    
+    .card {
+      border: none !important;
+      box-shadow: none !important;
+    }
+    
+    .card-body {
+      padding: 0 !important;
+    }
+    
+    @page {
+      size: A4;
+      margin: 10mm;
+    }
+    
+    body {
+      font-size: 12pt;
+    }
+  }
+  
+  .receipt-container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .receipt-header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .receipt-footer {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px dashed #ddd;
+  }
+  
+  .receipt-company-name {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  
+  .receipt-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin: 15px 0;
+    text-align: center;
+  }
+  
+  .receipt-meta {
+    margin: 20px 0;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .receipt-meta-left, .receipt-meta-right {
+    flex: 1;
+  }
+  
+  .receipt-meta-item {
+    margin-bottom: 8px;
+  }
+  
+  .receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+  }
+  
+  .receipt-table th {
+    border-bottom: 2px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+  
+  .receipt-table td {
+    border-bottom: 1px solid #eee;
+    padding: 8px;
+  }
+  
+  .receipt-table tfoot {
+    font-weight: bold;
+  }
+  
+  .receipt-table tfoot td {
+    border-top: 2px solid #ddd;
+  }
+  
+  .receipt-thanks {
+    font-style: italic;
+    margin-bottom: 10px;
+  }
+  
+  .qr-code {
+    text-align: center;
+    margin: 20px 0;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 no-print">
+  <h1>Receipt</h1>
+  <div>
+    <button onclick="window.print();" class="btn btn-primary">
+      <i class="material-icons">print</i> Print Receipt
+    </button>
+    <a href="{% url 'sale_detail' sale.id %}" class="btn btn-outline-secondary">
+      <i class="material-icons">arrow_back</i> Back to Sale
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="receipt-container">
+      <div class="receipt-header">
+        <div class="receipt-company-name">{{ company_name }}</div>
+        <div>{{ company_address }}</div>
+        <div>Phone: {{ company_phone }}</div>
+        <div>Email: info@fruitjuice.com</div>
+      </div>
+      
+      <div class="receipt-title">SALES RECEIPT</div>
+      
+      <div class="receipt-meta">
+        <div class="receipt-meta-left">
+          <div class="receipt-meta-item"><strong>Bill To:</strong> {{ sale.customer.name }}</div>
+          <div class="receipt-meta-item">{{ sale.customer.contact_person }}</div>
+          <div class="receipt-meta-item">{{ sale.customer.phone }}</div>
+          <div class="receipt-meta-item">{{ sale.customer.email }}</div>
+        </div>
+        <div class="receipt-meta-right">
+          <div class="receipt-meta-item"><strong>Receipt #:</strong> {{ sale.invoice_number }}</div>
+          <div class="receipt-meta-item"><strong>Date:</strong> {{ sale.sale_date }}</div>
+          <div class="receipt-meta-item"><strong>Status:</strong> {{ sale.status|title }}</div>
+          <div class="receipt-meta-item"><strong>Payment Status:</strong> {{ sale.payment_status|title }}</div>
+        </div>
+      </div>
+      
+      <table class="receipt-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Description</th>
+            <th>Qty</th>
+            <th>Unit Price</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ item.product.name }}</td>
+            <td>{{ item.product.description|truncatechars:30 }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>GHS{{ item.unit_price|floatformat:2 }}</td>
+            <td>GHS{{ item.total_price|floatformat:2 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3"></td>
+            <td>Subtotal:</td>
+            <td>GHS{{ subtotal|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <td colspan="3"></td>
+            <td>VAT ({{ tax_rate|multiply:100 }}%):</td>
+            <td>GHS{{ tax_amount|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <td colspan="3"></td>
+            <td>Total:</td>
+            <td>GHS{{ sale.total_amount|floatformat:2 }}</td>
+          </tr>
+        </tfoot>
+      </table>
+      
+      {% if sale.notes %}
+      <div class="mb-4">
+        <strong>Notes:</strong>
+        <p>{{ sale.notes }}</p>
+      </div>
+      {% endif %}
+      
+      <div class="qr-code">
+        <!-- Placeholder for QR code that could contain sale details -->
+        <img src="{% static 'img/qr-placeholder.png' %}" alt="QR Code" width="100">
+      </div>
+      
+      <div class="receipt-footer">
+        <div class="receipt-thanks">Thank you for your business!</div>
+        <div>This receipt was generated on {{ receipt_date|date:"F j, Y, g:i a" }}</div>
+        <div>For any inquiries please contact our customer service.</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Auto-open print dialog if print parameter is present in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('print') && urlParams.get('print') === 'true') {
+      window.print();
+    }
+  });
+</script>
+{% endblock %}

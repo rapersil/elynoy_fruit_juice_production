@@ -1,0 +1,382 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}
+  {% if sale %}Edit {{ sale.invoice_number }}{% else %}New Sale{% endif %} | Fruit Juice Production
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .item-form {
+    background-color: var(--color-50);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .item-form:hover {
+    background-color: var(--color-100);
+  }
+  
+  .delete-row {
+    color: var(--danger);
+  }
+  
+  .formset-header {
+    background-color: var(--color-100);
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>{% if sale %}Edit Sale{% else %}New Sale{% endif %}</h1>
+  <a href="{% url 'sale_list' %}" class="btn btn-outline-secondary">
+    <i class="material-icons">arrow_back</i> Back to List
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">{% if sale %}Edit {{ sale.invoice_number }}{% else %}Create New Sale{% endif %}</h5>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      
+      <h5 class="mb-3">Sale Information</h5>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.customer.id_for_label }}">Customer <span class="text-danger">*</span></label>
+            {{ form.customer }}
+            {% if form.customer.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.customer.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="form-group mb-3">
+            <label for="{{ form.sale_date.id_for_label }}">Sale Date <span class="text-danger">*</span></label>
+            {{ form.sale_date }}
+            {% if form.sale_date.errors %}
+            <div class="invalid-feedback d-block">
+              {{ form.sale_date.errors }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group mb-3">
+        <label for="{{ form.notes.id_for_label }}">Notes</label>
+        {{ form.notes }}
+        {% if form.notes.errors %}
+        <div class="invalid-feedback d-block">
+          {{ form.notes.errors }}
+        </div>
+        {% endif %}
+      </div>
+      
+      <hr class="my-4">
+      
+      <h5 class="mb-3">Sale Items</h5>
+      <p class="text-muted mb-3">Add the products being sold.</p>
+      
+      {{ formset.management_form }}
+      
+      <div class="row formset-header">
+        <div class="col-md-4">Product</div>
+        <div class="col-md-2">Quantity</div>
+        <div class="col-md-2">Unit Price</div>
+        <div class="col-md-2">Total</div>
+        <div class="col-md-2">Remove</div>
+      </div>
+      
+      <div id="items-formset">
+        {% for item_form in formset %}
+          <div class="item-form">
+            {{ item_form.id }}
+            <div class="row">
+              <div class="col-md-4">
+                <div class="form-group mb-2">
+                  {{ item_form.product }}
+                  {% if item_form.product.errors %}
+                  <div class="invalid-feedback d-block">
+                    {{ item_form.product.errors }}
+                  </div>
+                  {% endif %}
+                  <small class="product-stock text-muted"></small>
+                </div>
+              </div>
+              
+              <div class="col-md-2">
+                <div class="form-group mb-2">
+                  {{ item_form.quantity }}
+                  {% if item_form.quantity.errors %}
+                  <div class="invalid-feedback d-block">
+                    {{ item_form.quantity.errors }}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              
+              <div class="col-md-2">
+                <div class="form-group mb-2">
+                  {{ item_form.unit_price }}
+                  {% if item_form.unit_price.errors %}
+                  <div class="invalid-feedback d-block">
+                    {{ item_form.unit_price.errors }}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              
+              <div class="col-md-2">
+                <div class="form-group mb-2">
+                  <input type="text" class="form-control item-total" readonly value="GHS0.00">
+                </div>
+              </div>
+              
+              <div class="col-md-2">
+                <div class="form-group mb-2">
+                  <div class="form-check mt-2">
+                    {{ item_form.DELETE }}
+                    <label class="form-check-label delete-row" for="{{ item_form.DELETE.id_for_label }}">
+                      <i class="material-icons align-middle">delete</i> Remove
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      
+      <div class="text-center mb-4">
+        <button type="button" id="add-item" class="btn btn-outline-primary">
+          <i class="material-icons">add_circle</i> Add Item
+        </button>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-8"></div>
+        <div class="col-md-4">
+          <div class="card bg-light">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <h6 class="mb-0">Total Amount:</h6>
+                <span id="sale-total" class="fw-bold">GHS0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-end mt-4">
+        <a href="{% url 'sale_list' %}" class="btn btn-outline-secondary me-2">
+          Cancel
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="material-icons">save</i>
+          {% if sale %}Update{% else %}Create{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap classes to form inputs
+    document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea, select').forEach(function(el) {
+      el.classList.add('form-control');
+    });
+    
+    document.querySelectorAll('input[type="checkbox"]').forEach(function(el) {
+      el.classList.add('form-check-input');
+    });
+    
+    // Make all unit price inputs and total inputs read-only
+    document.querySelectorAll('input[name$="-unit_price"], .item-total').forEach(function(input) {
+      input.readOnly = true;
+    });
+    
+    // Handle "Add Item" button
+    const addItemBtn = document.getElementById('add-item');
+    if (addItemBtn) {
+      addItemBtn.addEventListener('click', function() {
+        const formsetContainer = document.getElementById('items-formset');
+        const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+        
+        // Get the number of existing forms
+        const formCount = parseInt(totalForms.value);
+        
+        // Clone the first empty form
+        const forms = formsetContainer.getElementsByClassName('item-form');
+        const lastForm = forms[forms.length - 1];
+        const newForm = lastForm.cloneNode(true);
+        
+        // Update the index in the new form's ID and name attributes
+        newForm.querySelectorAll('input, select, textarea').forEach(function(input) {
+          if (input.id) {
+            input.id = input.id.replace(/-\d+-/g, `-${formCount}-`);
+          }
+          if (input.name) {
+            input.name = input.name.replace(/-\d+-/g, `-${formCount}-`);
+          }
+          
+          // Clear the values
+          if (input.type === 'checkbox') {
+            input.checked = false;
+          } else if (input.tagName === 'SELECT') {
+            input.selectedIndex = 0;
+          } else {
+            input.value = '';
+          }
+        });
+        
+        // Update labels
+        const labels = newForm.querySelectorAll('label');
+        labels.forEach(function(label) {
+          if (label.htmlFor) {
+            label.htmlFor = label.htmlFor.replace(/-\d+-/g, `-${formCount}-`);
+          }
+        });
+        
+        // Make the unit price input read-only in the new form
+        const unitPriceInput = newForm.querySelector('input[name$="-unit_price"]');
+        if (unitPriceInput) {
+          unitPriceInput.readOnly = true;
+        }
+        
+        // Add the new form to the container
+        formsetContainer.appendChild(newForm);
+        
+        // Update the total number of forms
+        totalForms.value = formCount + 1;
+        
+        // Add event listeners for the new form
+        addCalculationListeners();
+        addProductChangeListeners();
+      });
+    }
+    
+    // Product selection event listeners
+    function addProductChangeListeners() {
+      document.querySelectorAll('select[name$="-product"]').forEach(function(select) {
+        select.addEventListener('change', function() {
+          const itemForm = this.closest('.item-form');
+          const unitPriceInput = itemForm.querySelector('input[name$="-unit_price"]');
+          const stockInfo = itemForm.querySelector('.product-stock');
+          
+          // Get the product ID
+          const productId = this.value;
+          
+          if (productId) {
+            // Fetch product details via AJAX
+            fetch(`/api/product/${productId}/details/`)
+              .then(response => response.json())
+              .then(data => {
+                if (data.success) {
+                  unitPriceInput.value = data.selling_price.toFixed(2);
+                  stockInfo.textContent = `In stock: ${data.stock_quantity} units`;
+                  
+                  // Re-calculate total
+                  calculateItemTotal(itemForm);
+                  calculateSaleTotal();
+                } else {
+                  console.error('Error fetching product details:', data.error);
+                }
+              })
+              .catch(error => {
+                console.error('Error fetching product details:', error);
+              });
+          } else {
+            unitPriceInput.value = '';
+            stockInfo.textContent = '';
+            calculateItemTotal(itemForm);
+            calculateSaleTotal();
+          }
+        });
+      });
+    }
+    
+    // Calculate totals
+    function calculateItemTotal(row) {
+      const quantityInput = row.querySelector('input[name$="-quantity"]');
+      const priceInput = row.querySelector('input[name$="-unit_price"]');
+      const totalInput = row.querySelector('.item-total');
+      
+      if (quantityInput && priceInput && totalInput) {
+        const quantity = parseFloat(quantityInput.value) || 0;
+        const price = parseFloat(priceInput.value) || 0;
+        const total = quantity * price;
+        
+        totalInput.value = 'GHS' + total.toFixed(2);
+      }
+    }
+
+    function calculateSaleTotal() {
+      let total = 0;
+      document.querySelectorAll('.item-form').forEach(function(row) {
+        const quantityInput = row.querySelector('input[name$="-quantity"]');
+        const priceInput = row.querySelector('input[name$="-unit_price"]');
+        
+        if (quantityInput && priceInput) {
+          const quantity = parseFloat(quantityInput.value) || 0;
+          const price = parseFloat(priceInput.value) || 0;
+          total += quantity * price;
+        }
+      });
+      
+      document.getElementById('sale-total').textContent = 'GHS' + total.toFixed(2);
+    }
+    
+    function addCalculationListeners() {
+      document.querySelectorAll('.item-form').forEach(function(row) {
+        const quantityInput = row.querySelector('input[name$="-quantity"]');
+        
+        if (quantityInput) {
+          quantityInput.addEventListener('input', function() {
+            calculateItemTotal(row);
+            calculateSaleTotal();
+          });
+        }
+      });
+    }
+    
+    // Initialize calculations and make unit price inputs read-only
+    document.querySelectorAll('.item-form').forEach(function(row) {
+      const unitPriceInput = row.querySelector('input[name$="-unit_price"]');
+      if (unitPriceInput) {
+        unitPriceInput.readOnly = true;
+      }
+      calculateItemTotal(row);
+    });
+    
+    calculateSaleTotal();
+    addCalculationListeners();
+    addProductChangeListeners();
+    
+    // Auto-populate today's date if date field is empty
+    const saleDateField = document.getElementById('{{ form.sale_date.id_for_label }}');
+    if (saleDateField && !saleDateField.value) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      saleDateField.value = `${yyyy}-${mm}-${dd}`;
+    }
+  });
+</script>
+{% endblock %}

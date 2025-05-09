@@ -1,0 +1,249 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}{{ customer.name }} | Supplier Details | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1>{{ customer.name }}</h1>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'supplier_list' %}">Suppliers</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ customer.name }}</li>
+      </ol>
+    </nav>
+  </div>
+  <div>
+    <a href="{% url 'customer_edit' customer.id %}" class="btn btn-primary">
+      <i class="material-icons">edit</i> Edit
+    </a>
+    <a href="{% url 'purchase_order_new' %}?supplier={{ customer.id }}" class="btn btn-secondary">
+      <i class="material-icons">shopping_cart</i> New Purchase Order
+    </a>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-5">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Supplier Details</h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="d-flex align-items-center">
+            <div style="width: 60px; height: 60px; border-radius: 50%; background-color: var(--color-700);
+              display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+              <i class="material-icons" style="font-size: 32px; color: white;">business</i>
+            </div>
+            <div>
+              <h4 class="mb-1">{{ customer.name }}</h4>
+              <span class="badge bg-primary">Supplier</span>
+              {% if customer.is_buyer %}
+              <span class="badge bg-info">Buyer</span>
+              {% endif %}
+              {% if customer.is_active %}
+              <span class="badge bg-success">Active</span>
+              {% else %}
+              <span class="badge bg-secondary">Inactive</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        
+        <table class="table">
+          <tr>
+            <th style="width: 40%;">Name</th>
+            <td>{{ customer.name }}</td>
+          </tr>
+          <tr>
+            <th>Contact Person</th>
+            <td>{{ customer.contact_person }}</td>
+          </tr>
+          <tr>
+            <th>Phone</th>
+            <td>{{ customer.phone }}</td>
+          </tr>
+          <tr>
+            <th>Email</th>
+            <td>{{ customer.email }}</td>
+          </tr>
+          <tr>
+            <th>Address</th>
+            <td>{{ customer.address|linebreaksbr }}</td>
+          </tr>
+          <tr>
+            <th>Payment Terms</th>
+            <td>{{ customer.payment_terms|default:"Not specified" }}</td>
+          </tr>
+          <tr>
+            <th>Date Added</th>
+            <td>{{ customer.date_added }}</td>
+          </tr>
+          <tr>
+            <th>Last Updated</th>
+            <td>{{ customer.last_updated }}</td>
+          </tr>
+        </table>
+        
+        {% if customer.notes %}
+        <div class="mt-3">
+          <h6>Notes:</h6>
+          <p>{{ customer.notes }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Purchase Summary</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="text-center mb-3">
+              <h6 class="text-muted">Total Purchases</h6>
+              <h2 class="mb-0">GHS{{ purchase_total|floatformat:2 }}</h2>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-center mb-3">
+              <h6 class="text-muted">Purchase Orders</h6>
+              <h2 class="mb-0">{{ purchase_count }}</h2>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-7">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Supplied Materials</h5>
+        <a href="{% url 'raw_material_new' %}?supplier={{ customer.id }}" class="btn btn-sm btn-outline-primary">
+          <i class="material-icons" style="font-size: 16px;">add</i> Add Material
+        </a>
+      </div>
+      <div class="card-body p-0">
+        {% if supplied_materials %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Material</th>
+                <th>Unit</th>
+                <th>Current Stock</th>
+                <th>Unit Cost</th>
+                <th>Last Purchase</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for material in supplied_materials %}
+              <tr{% if material.needs_reorder %} class="table-warning"{% endif %}>
+                <td>
+                  <a href="{% url 'raw_material_detail' material.id %}">{{ material.name }}</a>
+                </td>
+                <td>{{ material.unit }}</td>
+                <td{% if material.needs_reorder %} class="text-danger fw-bold"{% endif %}>
+                  {{ material.quantity_in_stock }} {{ material.unit }}
+                </td>
+                <td>GHS{{ material.unit_cost|floatformat:2 }}</td>
+                <td>{{ material.last_purchase_date|default:"Never" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <i class="material-icons" style="font-size: 48px; color: var(--color-200);">inventory</i>
+          <p class="mt-3 text-muted">No materials linked to this supplier</p>
+          <a href="{% url 'raw_material_new' %}?supplier={{ customer.id }}" class="btn btn-sm btn-primary mt-2">Add Material</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Purchase History</h5>
+        <a href="{% url 'purchase_order_list' %}?supplier={{ customer.id }}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="card-body p-0">
+        {% if purchase_orders %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>PO Number</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for po in purchase_orders %}
+              <tr>
+                <td>
+                  <a href="{% url 'purchase_order_detail' po.id %}">{{ po.po_number }}</a>
+                </td>
+                <td>{{ po.order_date }}</td>
+                <td>GHS{{ po.total_amount|floatformat:2 }}</td>
+                <td>
+                  {% if po.status == 'draft' %}
+                  <span class="badge bg-secondary">Draft</span>
+                  {% elif po.status == 'submitted' %}
+                  <span class="badge bg-primary">Submitted</span>
+                  {% elif po.status == 'partial' %}
+                  <span class="badge bg-warning">Partially Received</span>
+                  {% elif po.status == 'received' %}
+                  <span class="badge bg-success">Received</span>
+                  {% else %}
+                  <span class="badge bg-danger">Cancelled</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if po.payment_status == 'pending' %}
+                  <span class="badge bg-warning">Pending</span>
+                  {% elif po.payment_status == 'partial' %}
+                  <span class="badge bg-info">Partial</span>
+                  {% elif po.payment_status == 'paid' %}
+                  <span class="badge bg-success">Paid</span>
+                  {% else %}
+                  <span class="badge bg-danger">Cancelled</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <i class="material-icons" style="font-size: 48px; color: var(--color-200);">receipt_long</i>
+          <p class="mt-3 text-muted">No purchase history available</p>
+          <a href="{% url 'purchase_order_new' %}?supplier={{ customer.id }}" class="btn btn-sm btn-primary mt-2">Create Purchase Order</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Highlight that this is a supplier view
+    const supplierBadge = document.querySelector('.badge.bg-primary');
+    if (supplierBadge) {
+      supplierBadge.style.backgroundColor = 'var(--color-600)';
+    }
+  });
+</script>
+{% endblock %}

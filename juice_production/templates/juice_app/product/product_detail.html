@@ -1,0 +1,191 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}{{ product.name }} Details | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1>{{ product.name }}</h1>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'product_list' %}">Products</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
+      </ol>
+    </nav>
+  </div>
+  <div>
+    <a href="{% url 'product_edit' product.id %}" class="btn btn-primary">
+      <i class="material-icons">edit</i> Edit
+    </a>
+    <a href="{% url 'production_new' %}?product={{ product.id }}" class="btn btn-secondary">
+      <i class="material-icons">science</i> Create Batch
+    </a>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Product Details</h5>
+      </div>
+      <div class="card-body">
+        <table class="table">
+          <tr>
+            <th style="width: 30%;">Name</th>
+            <td>{{ product.name }}</td>
+          </tr>
+          <tr>
+            <th>SKU</th>
+            <td>{{ product.sku }}</td>
+          </tr>
+          <tr>
+            <th>Bottle Size</th>
+            <td>{{ product.bottle.size }}</td>
+          </tr>
+          <tr>
+            <th>Description</th>
+            <td>{{ product.description|default:"No description provided" }}</td>
+          </tr>
+          <tr>
+            <th>Ingredients Label</th>
+            <td>{{ product.ingredients_description }}</td>
+          </tr>
+          <tr>
+            <th>Production Cost</th>
+            <td>GHS{{ product.production_cost|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <th>Markup</th>
+            <td>{{ product.markup_percentage }}%</td>
+          </tr>
+          <tr>
+            <th>Selling Price</th>
+            <td>GHS{{ product.selling_price|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <th>Current Stock</th>
+            <td>{{ product.stock_quantity }} units</td>
+          </tr>
+          <tr>
+            <th>Status</th>
+            <td>
+              {% if product.is_active %}
+              <span class="badge bg-success">Active</span>
+              {% else %}
+              <span class="badge bg-secondary">Inactive</span>
+              {% endif %}
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recipe</h5>
+        <span class="badge bg-primary">{{ recipe|length }} Ingredients</span>
+      </div>
+      <div class="card-body p-0">
+        {% if recipe %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Material</th>
+                <th>Quantity</th>
+                <th>Unit</th>
+                <th>Primary</th>
+                <th>Order</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in recipe %}
+              <tr>
+                <td>
+                  <a href="{% url 'raw_material_detail' item.raw_material.id %}">{{ item.raw_material.name }}</a>
+                  {% if item.notes %}
+                  <br><small class="text-muted">{{ item.notes }}</small>
+                  {% endif %}
+                </td>
+                <td>{{ item.quantity_required }}</td>
+                <td>{{ item.raw_material.unit }}</td>
+                <td>
+                  {% if item.is_primary %}
+                  <i class="material-icons text-success">check_circle</i>
+                  {% else %}
+                  <i class="material-icons text-muted">remove</i>
+                  {% endif %}
+                </td>
+                <td>{{ item.order }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+          <i class="material-icons" style="font-size: 48px; color: var(--color-200);">receipt</i>
+          <p class="mt-3 text-muted">No recipe defined for this product</p>
+          <a href="{% url 'product_edit' product.id %}" class="btn btn-sm btn-primary mt-2">Add Recipe</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Production Batches</h5>
+        <a href="{% url 'production_list' %}?product={{ product.id }}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="card-body p-0">
+        {% if product.productionbatch_set.all %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Batch #</th>
+                <th>Date</th>
+                <th>Qty</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for batch in product.productionbatch_set.all|slice:":5" %}
+              <tr>
+                <td>
+                  <a href="{% url 'production_detail' batch.id %}">{{ batch.batch_number }}</a>
+                </td>
+                <td>{{ batch.production_date }}</td>
+                <td>{{ batch.planned_quantity }}</td>
+                <td>
+                  {% if batch.status == 'completed' %}
+                  <span class="badge bg-success">Completed</span>
+                  {% elif batch.status == 'in_progress' %}
+                  <span class="badge bg-warning">In Progress</span>
+                  {% elif batch.status == 'planned' %}
+                  <span class="badge bg-info">Planned</span>
+                  {% else %}
+                  <span class="badge bg-danger">Cancelled</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No production batches yet</p>
+          <a href="{% url 'production_new' %}?product={{ product.id }}" class="btn btn-sm btn-primary">Create Batch</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

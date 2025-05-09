@@ -1,0 +1,442 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Top Customers Analysis | Fruit Juice Production{% endblock %}
+
+{% block extra_css %}
+<style>
+  .date-range-selector {
+    background-color: var(--color-50);
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .customer-card {
+    transition: all 0.2s ease;
+    border-left: 4px solid var(--color-600);
+  }
+  
+  .progress-thin {
+    height: 6px;
+  }
+  
+  .customer-rank {
+    width: 28px;
+    height: 28px;
+    background-color: var(--color-600);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 12px;
+  }
+  
+  .metric-box {
+    background-color: var(--color-50);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  
+  .metric-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--color-800);
+    margin-bottom: 5px;
+  }
+  
+  .metric-label {
+    color: var(--color-600);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .product-pill {
+    background-color: var(--color-100);
+    border-radius: 20px;
+    padding: 5px 10px;
+    margin: 3px;
+    display: inline-block;
+    font-size: 12px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1>Top Customers Analysis</h1>
+    <p class="text-muted">Detailed insights into your most valuable customers</p>
+  </div>
+  <div>
+    <div class="dropdown d-inline-block me-2">
+      <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="material-icons align-middle">file_download</i> Export
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="exportDropdown">
+        <li><a class="dropdown-item" href="#"><i class="material-icons align-middle me-2" style="font-size: 16px;">description</i> PDF</a></li>
+        <li><a class="dropdown-item" href="#"><i class="material-icons align-middle me-2" style="font-size: 16px;">table_chart</i> Excel</a></li>
+      </ul>
+    </div>
+    <a href="{% url 'sales_dashboard' %}" class="btn btn-outline-primary">
+      <i class="material-icons align-middle">dashboard</i> Sales Dashboard
+    </a>
+  </div>
+</div>
+
+<!-- Date Range Selector -->
+<div class="date-range-selector">
+  <form method="get" class="mb-0">
+    <div class="row align-items-end">
+      <div class="col-md-4">
+        <div class="form-group mb-md-0 mb-3">
+          <label for="start_date" class="form-label">Start Date</label>
+          <input type="date" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" class="form-control">
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="form-group mb-md-0 mb-3">
+          <label for="end_date" class="form-label">End Date</label>
+          <input type="date" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" class="form-control">
+        </div>
+      </div>
+      <div class="col-md-4 text-md-end">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="material-icons align-middle me-1">date_range</i> Apply Range
+        </button>
+        <a href="{% url 'top_customers_analysis' %}" class="btn btn-outline-secondary">Reset</a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Summary Metrics -->
+<div class="row mb-4">
+  <div class="col-md-3 mb-3">
+    <div class="metric-box">
+      <div class="metric-value">{{ top_customers|length }}</div>
+      <div class="metric-label">Top Customers</div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="metric-box">
+      <div class="metric-value">GHS{{ total_revenue|floatformat:2 }}</div>
+      <div class="metric-label">Total Revenue</div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="metric-box">
+      <div class="metric-value">GHS{{ top_customers.0.total_spend|floatformat:2 }}</div>
+      <div class="metric-label">Top Customer Spend</div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="metric-box">
+      <div class="metric-value">{{ top_customers.0.revenue_percentage|floatformat:1 }}%</div>
+      <div class="metric-label">% of Total Revenue</div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <!-- Top 10 Customers Chart -->
+  <div class="col-md-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <h5 class="mb-0">Top 10 Customers by Revenue</h5>
+      </div>
+      <div class="card-body">
+        <div style="height: 350px;">
+          <canvas id="customerRevenueChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Purchase Frequency -->
+  <div class="col-md-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <h5 class="mb-0">Customer Purchase Frequency</h5>
+      </div>
+      <div class="card-body">
+        <div style="height: 350px;">
+          <canvas id="frequencyChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Top Customers Table -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">Top Customers Details</h5>
+  </div>
+  <div class="card-body p-0">
+    {% if top_customers %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Customer</th>
+            <th>Total Spend</th>
+            <th>Orders</th>
+            <th>Avg. Order</th>
+            <th>% of Revenue</th>
+            <th>Last Purchase</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for customer in top_customers %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>
+              <a href="{% url 'customer_detail' customer.customer__id %}">
+                {{ customer.customer__name }}
+              </a>
+            </td>
+            <td>GHS{{ customer.total_spend|floatformat:2 }}</td>
+            <td>{{ customer.order_count }}</td>
+            <td>GHS{{ customer.avg_order|floatformat:2 }}</td>
+            <td>
+              <div class="progress progress-thin" style="width: 100px;">
+                <div class="progress-bar" style="width: {{ customer.revenue_percentage }}%; background-color: var(--color-600);"></div>
+              </div>
+              <small>{{ customer.revenue_percentage|floatformat:1 }}%</small>
+            </td>
+            <td>{{ customer.last_purchase|date:"M d, Y" }}</td>
+            <td>
+              <div class="btn-group">
+                <a href="{% url 'customer_detail' customer.customer__id %}" class="btn btn-sm btn-outline-primary">
+                  <i class="material-icons" style="font-size: 16px;">visibility</i>
+                </a>
+                <a href="{% url 'sale_new' %}?customer={{ customer.customer__id }}" class="btn btn-sm btn-outline-secondary">
+                  <i class="material-icons" style="font-size: 16px;">add_shopping_cart</i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <p class="text-muted">No customer data available for the selected period</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Top 5 Customer Product Preferences -->
+<h5 class="mb-3">Top Customer Product Preferences</h5>
+<div class="row">
+  {% for customer_name, products in customer_products.items %}
+  <div class="col-md-4 mb-4">
+    <div class="card customer-card h-100">
+      <div class="card-header">
+        <div class="d-flex align-items-center">
+          <div class="customer-rank">{{ forloop.counter }}</div>
+          <h6 class="mb-0">{{ customer_name }}</h6>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <small class="text-muted">Top Products:</small>
+        </div>
+        {% for product in products %}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>{{ product.product__name }}</div>
+          <div>GHS{{ product.total|floatformat:2 }}</div>
+        </div>
+        <div class="progress progress-thin mb-3">
+          <div class="progress-bar" style="width: {{ product.total|divide:products.0.total|multiply:100 }}%; background-color: var(--color-600);"></div>
+        </div>
+        {% empty %}
+        <p class="text-muted">No product data available</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Opportunities Section -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">Customer Growth Opportunities</h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <h6>High-Value Customers for Targeted Marketing</h6>
+        <p>These customers represent your highest value segments and are prime candidates for loyalty programs and premium offerings:</p>
+        <ul class="list-group">
+          {% for customer in top_customers|slice:":5" %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ customer.customer__name }}
+            <span class="badge bg-primary rounded-pill">GHS{{ customer.total_spend|floatformat:0 }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      
+      <div class="col-md-6">
+        <h6>Recently Active Customers</h6>
+        <p>These customers have made purchases recently and may be receptive to special offers:</p>
+        <ul class="list-group">
+          {% for customer in top_customers|dictsortreversed:"last_purchase"|slice:":5" %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ customer.customer__name }}
+            <span class="badge bg-info rounded-pill">{{ customer.last_purchase|date:"M d, Y" }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Get CSS variables for chart colors
+    const style = getComputedStyle(document.documentElement);
+    const colorPrimary = style.getPropertyValue('--color-600');
+    const colorSecondary = style.getPropertyValue('--color-400');
+    
+    // Generate color palette for charts
+    function generateColors(numColors) {
+      const colors = [];
+      const baseHue = 10; // Red/orange hue
+      const saturation = 70;
+      const lightness = 55;
+      
+      for (let i = 0; i < numColors; i++) {
+        // Vary the hue slightly for each segment
+        const hue = (baseHue + (i * 5)) % 360;
+        colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+      }
+      
+      return colors;
+    }
+    
+    // Top Customers Revenue Chart
+    const revenueCtx = document.getElementById('customerRevenueChart').getContext('2d');
+    const customerRevenueChart = new Chart(revenueCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ customer_names|safe }},
+        datasets: [
+          {
+            label: 'Revenue (GHS)',
+            data: {{ customer_spend|safe }},
+            backgroundColor: generateColors({{ customer_names|length }}),
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Revenue (GHS)',
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Customer',
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            },
+            ticks: {
+              callback: function(value, index, values) {
+                // Shorten customer names for better display
+                const label = this.getLabelForValue(value);
+                if (label.length > 15) {
+                  return label.substr(0, 15) + '...';
+                }
+                return label;
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return `GHS ${context.raw.toFixed(2)}`;
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Purchase Frequency Chart
+    const frequencyCtx = document.getElementById('frequencyChart').getContext('2d');
+    const frequencyChart = new Chart(frequencyCtx, {
+      type: 'pie',
+      data: {
+        labels: {{ frequency_labels|safe }}.map(value => `${value} Order${value !== 1 ? 's' : ''}`),
+        datasets: [
+          {
+            data: {{ frequency_values|safe }},
+            backgroundColor: generateColors({{ frequency_labels|length }}),
+            borderWidth: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const value = context.raw;
+                const label = context.label;
+                return `${label}: ${value} customer${value !== 1 ? 's' : ''}`;
+              }
+            }
+          }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

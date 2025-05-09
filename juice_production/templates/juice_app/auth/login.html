@@ -1,0 +1,70 @@
+{% extends 'juice_app/base.html' %}
+{% load static %}
+
+{% block title %}Login | Fruit Juice Production{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="text-center my-3">Login</h3>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="form-group mb-3">
+                        <label for="{{ form.username.id_for_label }}">
+                            <i class="material-icons align-middle me-1">person</i>
+                            Username
+                        </label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                        <div class="invalid-feedback d-block text-danger">
+                            {{ form.username.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="{{ form.password.id_for_label }}">
+                            <i class="material-icons align-middle me-1">lock</i>
+                            Password
+                        </label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                        <div class="invalid-feedback d-block text-danger">
+                            {{ form.password.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group d-flex align-items-center justify-content-between mt-4 mb-0">
+                        <a class="small" href="{% url 'password_reset' %}">Forgot Password?</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="material-icons align-middle me-1">login</i>
+                            Login
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center py-3">
+                <div class="small">
+                    <a href="{% url 'register' %}">Need an account? Sign up!</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add Bootstrap classes to form inputs
+        document.getElementById('{{ form.username.id_for_label }}').classList.add('form-control');
+        document.getElementById('{{ form.password.id_for_label }}').classList.add('form-control');
+    });
+</script>
+{% endblock %}
