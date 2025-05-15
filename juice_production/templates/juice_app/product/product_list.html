@@ -1,5 +1,6 @@
 {% extends 'juice_app/base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Products | Fruit Juice Production{% endblock %}
 
@@ -11,11 +12,115 @@
   </a>
 </div>
 
+<!-- Filter Section -->
+<div class="card mb-4">
+  <div class="card-body bg-light">
+    <form method="get" class="row g-3">
+      <div class="col-md-3">
+        <label for="status-filter" class="form-label">Status</label>
+        <select id="status-filter" name="status" class="form-select">
+          <option value="all" {% if filter_status == 'all' %}selected{% endif %}>All Products</option>
+          <option value="active" {% if filter_status == 'active' %}selected{% endif %}>Active Only</option>
+          <option value="inactive" {% if filter_status == 'inactive' %}selected{% endif %}>Inactive Only</option>
+        </select>
+      </div>
+      
+      <div class="col-md-3">
+        <label for="bottle-filter" class="form-label">Bottle Size</label>
+        <select id="bottle-filter" name="bottle" class="form-select">
+          <option value="all" {% if filter_bottle == 'all' %}selected{% endif %}>All Sizes</option>
+          {% for bottle in all_bottles %}
+          <option value="{{ bottle.id }}" {% if filter_bottle == bottle.id|stringformat:"i" %}selected{% endif %}>{{ bottle.size }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="col-md-3">
+        <label for="stock-filter" class="form-label">Stock Level</label>
+        <select id="stock-filter" name="stock" class="form-select">
+          <option value="all" {% if filter_stock == 'all' %}selected{% endif %}>All Levels</option>
+          <option value="in_stock" {% if filter_stock == 'in_stock' %}selected{% endif %}>In Stock</option>
+          <option value="out_of_stock" {% if filter_stock == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
+          <option value="low_stock" {% if filter_stock == 'low_stock' %}selected{% endif %}>Low Stock</option>
+        </select>
+      </div>
+      
+      <div class="col-md-3">
+        <label for="search-input" class="form-label">Search</label>
+        <div class="input-group">
+          <input type="text" id="search-input" name="search" class="form-control" placeholder="Search products..." value="{{ search_query }}">
+          <button class="btn btn-primary" type="submit">
+            <i class="material-icons align-middle">search</i>
+          </button>
+        </div>
+      </div>
+      
+      <div class="col-md-12 text-end">
+        <div class="d-inline-block me-2">
+          <label for="sort-by" class="form-label me-2">Sort by:</label>
+          <select id="sort-by" name="sort" class="form-select-sm d-inline-block" style="width: auto;">
+            <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+            <option value="price_low" {% if sort_by == 'price_low' %}selected{% endif %}>Price (Low to High)</option>
+            <option value="price_high" {% if sort_by == 'price_high' %}selected{% endif %}>Price (High to Low)</option>
+            <option value="stock_low" {% if sort_by == 'stock_low' %}selected{% endif %}>Stock (Low to High)</option>
+            <option value="stock_high" {% if sort_by == 'stock_high' %}selected{% endif %}>Stock (High to Low)</option>
+          </select>
+        </div>
+        <a href="{% url 'product_list' %}" class="btn btn-outline-secondary">Reset Filters</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+  <div class="col-md-3 mb-3">
+    <div class="card">
+      <div class="card-body text-center">
+        <i class="material-icons mb-2" style="font-size: 36px; color: var(--color-600);">inventory</i>
+        <h3>{{ total_products }}</h3>
+        <p class="text-muted mb-0">Total Products</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="card">
+      <div class="card-body text-center">
+        <i class="material-icons mb-2" style="font-size: 36px; color: var(--success);">check_circle</i>
+        <h3>{{ active_products }}</h3>
+        <p class="text-muted mb-0">Active Products</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="card">
+      <div class="card-body text-center">
+        <i class="material-icons mb-2" style="font-size: 36px; color: var(--warning);">error_outline</i>
+        <h3>{{ low_stock }}</h3>
+        <p class="text-muted mb-0">Low Stock</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="card">
+      <div class="card-body text-center">
+        <i class="material-icons mb-2" style="font-size: 36px; color: var(--color-600);">savings</i>
+        <h3>GHS{{ total_inventory_value|floatformat:2 }}</h3>
+        <p class="text-muted mb-0">Inventory Value</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Products List -->
 <div class="card">
   <div class="card-header">
     <div class="d-flex justify-content-between align-items-center">
-      <h5 class="mb-0">All Products</h5>
-      <span class="badge bg-primary">{{ products|length }} Total</span>
+      <h5 class="mb-0">Products</h5>
+      <span class="badge bg-primary">{{ products|length }} Products Found</span>
     </div>
   </div>
   <div class="card-body p-0">
@@ -28,6 +133,7 @@
             <th>SKU</th>
             <th>Bottle Size</th>
             <th>Stock Qty</th>
+            <th>Cost</th>
             <th>Selling Price</th>
             <th>Status</th>
             <th>Actions</th>
@@ -39,7 +145,16 @@
             <td>{{ product.name }}</td>
             <td>{{ product.sku }}</td>
             <td>{{ product.bottle.size }}</td>
-            <td>{{ product.stock_quantity }}</td>
+            <td>
+              {% if product.stock_quantity == 0 %}
+              <span class="text-danger fw-bold">{{ product.stock_quantity }}</span>
+              {% elif product.stock_quantity <= 10 %}
+              <span class="text-warning fw-bold">{{ product.stock_quantity }}</span>
+              {% else %}
+              {{ product.stock_quantity }}
+              {% endif %}
+            </td>
+            <td>GHS{{ product.production_cost|floatformat:2 }}</td>
             <td>GHS{{ product.selling_price|floatformat:2 }}</td>
             <td>
               {% if product.is_active %}
@@ -56,6 +171,9 @@
                 <a href="{% url 'product_edit' product.id %}" class="btn btn-sm btn-outline-secondary">
                   <i class="material-icons" style="font-size: 16px;">edit</i>
                 </a>
+                <a href="{% url 'production_new' %}?product={{ product.id }}" class="btn btn-sm btn-outline-success">
+                  <i class="material-icons" style="font-size: 16px;">science</i>
+                </a>
               </div>
             </td>
           </tr>
@@ -66,10 +184,33 @@
     {% else %}
     <div class="text-center py-5">
       <i class="material-icons" style="font-size: 48px; color: var(--color-200);">local_drink</i>
-      <p class="mt-3 text-muted">No products found</p>
+      <p class="mt-3 text-muted">No products found matching your criteria</p>
       <a href="{% url 'product_new' %}" class="btn btn-primary mt-2">Add First Product</a>
     </div>
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Enable automatic form submission when filters change
+    document.getElementById('status-filter').addEventListener('change', function() {
+      this.form.submit();
+    });
+    
+    document.getElementById('bottle-filter').addEventListener('change', function() {
+      this.form.submit();
+    });
+    
+    document.getElementById('stock-filter').addEventListener('change', function() {
+      this.form.submit();
+    });
+    
+    document.getElementById('sort-by').addEventListener('change', function() {
+      this.form.submit();
+    });
+  });
+</script>
 {% endblock %}

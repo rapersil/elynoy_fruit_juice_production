@@ -14,6 +14,8 @@
   
   .metric-card {
     transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
   }
   
   .metric-card:hover {
@@ -37,6 +39,33 @@
   .trend-neutral {
     color: var(--secondary);
   }
+  
+  .metric-icon {
+    position: absolute;
+    right: -15px;
+    bottom: -15px;
+    font-size: 100px;
+    opacity: 0.05;
+  }
+  
+  .profit-bar {
+    height: 8px;
+    border-radius: 4px;
+    margin-top: 5px;
+  }
+  
+  .chart-container {
+    position: relative;
+    height: 300px;
+  }
+  
+  .insights-panel {
+    background-color: #f8f9fa;
+    border-left: 4px solid var(--color-600);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0 0.25rem 0.25rem 0;
+  }
 </style>
 {% endblock %}
 
@@ -44,7 +73,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h1>Sales Report</h1>
-    <p class="text-muted">Analyze sales performance and revenue trends</p>
+    <p class="text-muted">Comprehensive sales analytics and performance metrics</p>
   </div>
   <div>
     <div class="dropdown d-inline-block me-2">
@@ -105,6 +134,39 @@
   </form>
 </div>
 
+<!-- Key Insights Panel -->
+<div class="insights-panel mb-4">
+  <h5><i class="material-icons align-middle me-2" style="font-size: 20px;">lightbulb</i> Key Insights</h5>
+  <div class="row mt-3">
+    <div class="col-md-6">
+      <ul class="mb-0">
+        {% if sales_trend > 10 %}
+        <li>Sales are up <strong>{{ sales_trend|floatformat:1 }}%</strong> compared to the previous period.</li>
+        {% elif sales_trend < -10 %}
+        <li>Sales have declined <strong>{{ sales_trend|abs|floatformat:1 }}%</strong> compared to the previous period.</li>
+        {% endif %}
+        
+        {% if top_products %}
+        <li><strong>{{ top_products.0.product__name }}</strong> is the top-selling product, generating <strong>GHS{{ top_products.0.revenue|floatformat:2 }}</strong>.</li>
+        {% endif %}
+        
+        <li>The average order value is <strong>GHS{{ avg_order_value|floatformat:2 }}</strong>.</li>
+      </ul>
+    </div>
+    <div class="col-md-6">
+      <ul class="mb-0">
+        {% if top_customers %}
+        <li><strong>{{ top_customers.0.customer__name }}</strong> is the top customer with <strong>{{ top_customers.0.order_count }}</strong> orders.</li>
+        {% endif %}
+        
+        <li><strong>{{ repeat_customer_rate|floatformat:1 }}%</strong> of customers have made repeat purchases.</li>
+        
+        <li><strong>{{ payment_rate|floatformat:1 }}%</strong> of orders have been fully paid.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
 <!-- Sales Metrics -->
 <div class="row mb-4">
   <div class="col-md-3 mb-3">
@@ -118,11 +180,11 @@
               {{ sale_count }} orders
               {% if sales_trend > 0 %}
               <span class="trend-indicator trend-up">
-                <i class="material-icons align-middle" style="font-size: 16px;">trending_up</i> {{ sales_trend }}%
+                <i class="material-icons align-middle" style="font-size: 16px;">trending_up</i> {{ sales_trend|floatformat:1 }}%
               </span>
               {% elif sales_trend < 0 %}
               <span class="trend-indicator trend-down">
-                <i class="material-icons align-middle" style="font-size: 16px;">trending_down</i> {{ sales_trend|abs }}%
+                <i class="material-icons align-middle" style="font-size: 16px;">trending_down</i> {{ sales_trend|abs|floatformat:1 }}%
               </span>
               {% else %}
               <span class="trend-indicator trend-neutral">
@@ -135,6 +197,7 @@
             <i class="material-icons" style="font-size: 28px; color: var(--color-700);">point_of_sale</i>
           </div>
         </div>
+        <i class="material-icons metric-icon">monetization_on</i>
       </div>
     </div>
   </div>
@@ -152,6 +215,7 @@
             <i class="material-icons" style="font-size: 28px; color: var(--color-700);">receipt</i>
           </div>
         </div>
+        <i class="material-icons metric-icon">shopping_cart</i>
       </div>
     </div>
   </div>
@@ -169,6 +233,7 @@
             <i class="material-icons" style="font-size: 28px; color: var(--color-700);">inventory_2</i>
           </div>
         </div>
+        <i class="material-icons metric-icon">local_shipping</i>
       </div>
     </div>
   </div>
@@ -178,14 +243,15 @@
       <div class="card-body">
         <div class="d-flex justify-content-between">
           <div>
-            <h6 class="text-muted mb-1">Payment Rate</h6>
-            <h2 class="mb-0">{{ payment_rate|floatformat:1 }}%</h2>
-            <p class="text-muted mb-0">Orders paid</p>
+            <h6 class="text-muted mb-1">Customer Retention</h6>
+            <h2 class="mb-0">{{ repeat_customer_rate|floatformat:1 }}%</h2>
+            <p class="text-muted mb-0">Repeat customers</p>
           </div>
           <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">payments</i>
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">people</i>
           </div>
         </div>
+        <i class="material-icons metric-icon">favorite</i>
       </div>
     </div>
   </div>
@@ -195,17 +261,69 @@
   <div class="col-md-8">
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Revenue Trend</h5>
+        <h5 class="mb-0">Sales Performance</h5>
         <div class="btn-group" role="group">
-          <button type="button" class="btn btn-sm btn-outline-secondary active">Revenue</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary">Orders</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary">Units</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary active" data-chart-view="revenue">Revenue</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-chart-view="orders">Orders</button>
         </div>
       </div>
       <div class="card-body">
-        <div style="height: 300px;">
-          <canvas id="salesTrendChart"></canvas>
+        <div class="chart-container">
+          <canvas id="salesPerformanceChart"></canvas>
         </div>
+      </div>
+    </div>
+    
+    <!-- New: Product Profitability Analysis -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Product Profitability</h5>
+      </div>
+      <div class="card-body">
+        {% if product_profitability %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Units Sold</th>
+                <th>Revenue</th>
+                <th>Avg. Price</th>
+                <th>Profit Margin</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for product in product_profitability %}
+              <tr>
+                <td>{{ product.product__name }}</td>
+                <td>{{ product.quantity }}</td>
+                <td>GHS{{ product.revenue|floatformat:2 }}</td>
+                <td>GHS{{ product.avg_selling_price|floatformat:2 }}</td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <span>{{ product.profit_margin|floatformat:1 }}%</span>
+                    <div class="w-100 ms-2">
+                      <div class="progress profit-bar">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                          style="width: {{ product.profit_margin }}%;" 
+                          aria-valuenow="{{ product.profit_margin }}" 
+                          aria-valuemin="0" 
+                          aria-valuemax="100">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No product data available for this period</p>
+        </div>
+        {% endif %}
       </div>
     </div>
     
@@ -223,7 +341,6 @@
                 <th>Invoice #</th>
                 <th>Customer</th>
                 <th>Date</th>
-                <th>Items</th>
                 <th>Total</th>
                 <th>Status</th>
                 <th>Payment</th>
@@ -237,7 +354,6 @@
                 </td>
                 <td>{{ sale.customer.name }}</td>
                 <td>{{ sale.sale_date }}</td>
-                <td>{{ sale.item_count }}</td>
                 <td>GHS{{ sale.total_amount|floatformat:2 }}</td>
                 <td>
                   {% if sale.status == 'draft' %}
@@ -278,6 +394,18 @@
   </div>
   
   <div class="col-md-4">
+    <!-- New: Payment Methods Distribution -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Payment Methods</h5>
+      </div>
+      <div class="card-body">
+        <div style="height: 250px;">
+          <canvas id="paymentMethodsChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
     <div class="card mb-4">
       <div class="card-header">
         <h5 class="mb-0">Top Products</h5>
@@ -308,7 +436,7 @@
               {% for customer in top_customers %}
               <tr>
                 <td>
-                    <a href="{% url 'customer_detail' customer.customer__id %}">{{ customer.customer__name }}</a>
+                  <a href="{% url 'customer_detail' customer.customer__id %}">{{ customer.customer__name }}</a>
                 </td>
                 <td>{{ customer.order_count }}</td>
                 <td>GHS{{ customer.total_spend|floatformat:2 }}</td>
@@ -327,7 +455,7 @@
     
     <div class="card">
       <div class="card-header">
-        <h5 class="mb-0">Revenue by Status</h5>
+        <h5 class="mb-0">Sales by Status</h5>
       </div>
       <div class="card-body">
         <div style="height: 200px;">
@@ -348,9 +476,9 @@
     const colorPrimary = style.getPropertyValue('--color-600');
     const colorSecondary = style.getPropertyValue('--color-300');
     
-    // Sales Trend Chart
-    const trendCtx = document.getElementById('salesTrendChart').getContext('2d');
-    const salesTrendChart = new Chart(trendCtx, {
+    // Sales Performance Chart
+    const salesCtx = document.getElementById('salesPerformanceChart').getContext('2d');
+    const salesChart = new Chart(salesCtx, {
       type: 'line',
       data: {
         labels: {{ trend_dates|safe }},
@@ -362,15 +490,32 @@
             backgroundColor: 'rgba(200, 68, 58, 0.1)',
             borderWidth: 2,
             fill: true,
-            tension: 0.4
+            tension: 0.4,
+            yAxisID: 'y-revenue'
+          },
+          {
+            label: 'Orders',
+            data: {{ order_counts|safe }},
+            borderColor: colorSecondary,
+            backgroundColor: 'rgba(150, 150, 150, 0.1)',
+            borderWidth: 2,
+            fill: false,
+            tension: 0.4,
+            yAxisID: 'y-orders',
+            hidden: true
           }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        },
         scales: {
-          y: {
+          'y-revenue': {
+            position: 'left',
             beginAtZero: true,
             title: {
               display: true,
@@ -378,6 +523,20 @@
               font: {
                 family: "'Montserrat', sans-serif"
               }
+            }
+          },
+          'y-orders': {
+            position: 'right',
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Orders',
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            },
+            grid: {
+              drawOnChartArea: false
             }
           },
           x: {
@@ -391,8 +550,21 @@
           }
         },
         plugins: {
-          legend: {
-            display: false
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) {
+                  label += ': ';
+                }
+                if (context.datasetIndex === 0) {
+                  label += 'GHS' + context.parsed.y.toFixed(2);
+                } else {
+                  label += context.parsed.y;
+                }
+                return label;
+              }
+            }
           }
         }
       }
@@ -474,9 +646,91 @@
                 family: "'Montserrat', sans-serif"
               }
             }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.label || '';
+                let value = context.parsed || 0;
+                let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                let percentage = Math.round((value / total) * 100);
+                return `${label}: GHS${value.toFixed(2)} (${percentage}%)`;
+              }
+            }
           }
         }
       }
+    });
+    
+    // Payment Methods Chart
+    const paymentMethodsCtx = document.getElementById('paymentMethodsChart').getContext('2d');
+    const paymentMethodsData = {
+      labels: [{% for method in payment_methods %}'{{ method.payment_method|title }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+      datasets: [{
+        data: [{% for method in payment_methods %}{{ method.total }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+        backgroundColor: [
+          '#4e73df',
+          '#1cc88a',
+          '#36b9cc',
+          '#f6c23e',
+          '#e74a3b',
+          '#858796'
+        ],
+        borderWidth: 1
+      }]
+    };
+    
+    const paymentMethodsChart = new Chart(paymentMethodsCtx, {
+      type: 'pie',
+      data: paymentMethodsData,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              font: {
+                family: "'Montserrat', sans-serif"
+              }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.label || '';
+                let value = context.parsed || 0;
+                let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                let percentage = Math.round((value / total) * 100);
+                return `${label}: GHS${value.toFixed(2)} (${percentage}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Chart view toggle
+    const chartViewButtons = document.querySelectorAll('[data-chart-view]');
+    chartViewButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const view = this.getAttribute('data-chart-view');
+        
+        // Update active button
+        chartViewButtons.forEach(btn => btn.classList.remove('active'));
+        this.classList.add('active');
+        
+        // Update chart visibility
+        if (view === 'revenue') {
+          salesChart.data.datasets[0].hidden = false;
+          salesChart.data.datasets[1].hidden = true;
+        } else {
+          salesChart.data.datasets[0].hidden = true;
+          salesChart.data.datasets[1].hidden = false;
+        }
+        
+        salesChart.update();
+      });
     });
   });
 </script>

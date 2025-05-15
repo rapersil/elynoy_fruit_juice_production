@@ -3,16 +3,95 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
 from django.forms import inlineformset_factory
+from django.db.models import Q
 from ..models import Product, Bottle, Recipe, RawMaterial
 from django import forms
 from ..forms import RecipeForm, ProductForm
 
 
 @login_required
+@login_required
 def product_list(request):
-    """Display list of products."""
-    products = Product.objects.all().order_by('name')
-    return render(request, 'juice_app/product/product_list.html', {'products': products})
+    """Display list of products with filtering and search functionality."""
+    # Get all bottle sizes for filter dropdown
+    all_bottles = Bottle.objects.filter(is_active=True).order_by('size')
+    
+    # Initialize filter variables
+    filter_status = request.GET.get('status', 'all')
+    filter_bottle = request.GET.get('bottle', 'all')
+    filter_stock = request.GET.get('stock', 'all')
+    search_query = request.GET.get('search', '')
+    sort_by = request.GET.get('sort', 'name')
+    
+    # Start with all products
+    products = Product.objects.all()
+    
+    # Apply status filter
+    if filter_status == 'active':
+        products = products.filter(is_active=True)
+    elif filter_status == 'inactive':
+        products = products.filter(is_active=False)
+    
+    # Apply bottle filter
+    if filter_bottle != 'all':
+        products = products.filter(bottle_id=filter_bottle)
+    
+    # Apply stock filter
+    if filter_stock == 'in_stock':
+        products = products.filter(stock_quantity__gt=0)
+    elif filter_stock == 'out_of_stock':
+        products = products.filter(stock_quantity=0)
+    elif filter_stock == 'low_stock':
+        products = products.filter(stock_quantity__gt=0, stock_quantity__lte=10)  # Assuming 10 is low stock threshold
+    
+    # Apply search filter
+    if search_query:
+        products = products.filter(
+            Q(name__icontains=search_query) | 
+            Q(description__icontains=search_query) |
+            Q(sku__icontains=search_query)
+        )
+    
+    # Apply sorting
+    if sort_by == 'name':
+        products = products.order_by('name')
+    elif sort_by == 'price_low':
+        products = products.order_by('selling_price')
+    elif sort_by == 'price_high':
+        products = products.order_by('-selling_price')
+    elif sort_by == 'stock_low':
+        products = products.order_by('stock_quantity')
+    elif sort_by == 'stock_high':
+        products = products.order_by('-stock_quantity')
+    
+    # Calculate summary statistics
+    total_products = products.count()
+    active_products = products.filter(is_active=True).count()
+    out_of_stock = products.filter(stock_quantity=0).count()
+    low_stock = products.filter(stock_quantity__gt=0, stock_quantity__lte=10).count()
+    
+    # Calculate inventory value
+    total_inventory_value = sum(
+        product.stock_quantity * product.selling_price 
+        for product in products
+    )
+    
+    context = {
+        'products': products,
+        'all_bottles': all_bottles,
+        'filter_status': filter_status,
+        'filter_bottle': filter_bottle,
+        'filter_stock': filter_stock,
+        'search_query': search_query,
+        'sort_by': sort_by,
+        'total_products': total_products,
+        'active_products': active_products,
+        'out_of_stock': out_of_stock,
+        'low_stock': low_stock,
+        'total_inventory_value': total_inventory_value,
+    }
+    
+    return render(request, 'juice_app/product/product_list.html', context)
 
 @login_required
 def product_detail(request, product_id):

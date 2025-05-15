@@ -4,8 +4,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from ..models import *
 from django import forms
-from django.db.models import Q, Count, Max, F
-
+from django.db.models import Q, Count, Max, Min, F, Sum
+from django.db.models.functions import TruncMonth
+import json
 from ..forms import CustomerForm
 
 @login_required
@@ -182,7 +183,6 @@ def customer_list(request):
     return render(request, 'juice_app/customer/customer_list.html', context)
 
 @login_required
-@login_required
 def supplier_list(request):
     """Display list of suppliers (customers who are suppliers)."""
     suppliers = Customer.objects.filter(is_supplier=True).order_by('name')
@@ -215,7 +215,7 @@ def supplier_list(request):
 
 @login_required
 def customer_detail(request, customer_id):
-    """Display details of a customer."""
+    """Display comprehensive details of a customer with enhanced analytics."""
     customer = get_object_or_404(Customer, id=customer_id)
     
     # Get related orders if they're a supplier
@@ -225,23 +225,129 @@ def customer_detail(request, customer_id):
     
     # Get related sales if they're a buyer
     sales = None
-    sales_summary = None
-    total_sales = None
-    total_sales_count = None
+    sales_count = 0
+    total_sales = 0
+    avg_order_value = 0
+    first_purchase_date = None
+    last_purchase_date = None
+    purchase_frequency = None
+    
     if customer.is_buyer:
-        sales = customer.sale_set.all().order_by('-sale_date')[:5]
-        # Calculate sales summary
-        total_sales = customer.sale_set.aggregate(total=Sum('total_amount'))['total'] or 0
-        total_sales_count = customer.sale_set.count()
-        sales_summary = {
-            'total_sales': total_sales,
-            'total_sales_count': total_sales_count,
+        sales = customer.sale_set.filter(status__in=['confirmed', 'shipped', 'delivered']).order_by('-sale_date')
+        sales_count = sales.count()
+        
+        # Calculate financial metrics
+        total_sales = sales.aggregate(total=Sum('total_amount'))['total'] or 0
+        avg_order_value = total_sales / sales_count if sales_count > 0 else 0
+        
+        # Get first and last purchase dates
+        date_metrics = sales.aggregate(
+            first_date=Min('sale_date'),
+            last_date=Max('sale_date')
+        )
+        first_purchase_date = date_metrics['first_date']
+        last_purchase_date = date_metrics['last_date']
+        
+        # Calculate purchase frequency (average days between orders)
+        if sales_count > 1 and first_purchase_date and last_purchase_date:
+            days_as_customer = (last_purchase_date - first_purchase_date).days
+            purchase_frequency = days_as_customer / (sales_count - 1) if days_as_customer > 0 else None
+    
+    # Credit information and status
+    paid_amount = customer.sale_set.filter(
+        payment_status__in=['paid', 'partial']
+    ).aggregate(paid=Sum('total_amount'))['paid'] or 0
+    
+    credit_used = max(0, total_sales - paid_amount)
+    credit_available = max(0, customer.credit_limit - credit_used) if customer.credit_limit else 0
+    credit_percent = (credit_used / customer.credit_limit * 100) if customer.credit_limit and customer.credit_limit > 0 else 0
+    
+    # Get payment history
+    payment_history = Payment.objects.filter(
+        sale__customer=customer
+    ).order_by('-payment_date')[:5]
+    
+    payment_totals = payment_history.aggregate(
+        total_paid=Sum('amount')
+    )['total_paid'] or 0
+    
+    # Get payment method breakdown
+    payment_methods = Payment.objects.filter(
+        sale__customer=customer
+    ).values('payment_method').annotate(
+        count=Count('id'),
+        total=Sum('amount')
+    ).order_by('-total')
+    
+    # Get purchased products with metrics
+    purchased_products = []
+    if customer.is_buyer:
+        product_data = SaleItem.objects.filter(
+            sale__customer=customer,
+            sale__status__in=['confirmed', 'shipped', 'delivered']
+        ).values(
+            'product__id',
+            'product__name',
+            'product__bottle__size'
+        ).annotate(
+            total_quantity=Sum('quantity'),
+            total_value=Sum('total_price'),
+            last_purchase_date=Max('sale__sale_date'),
+            purchase_count=Count('sale__id', distinct=True)
+        ).order_by('-total_value')[:10]
+        
+        purchased_products = list(product_data)
+    
+    # Seasonal purchase analysis
+    monthly_sales = {}
+    if customer.is_buyer and sales_count > 0:
+        monthly_data = sales.annotate(
+            month=TruncMonth('sale_date')
+        ).values('month').annotate(
+            total=Sum('total_amount'),
+            count=Count('id')
+        ).order_by('month')
+        
+        # Convert to lists for chart
+        months = [item['month'].strftime('%b %Y') for item in monthly_data]
+        monthly_amounts = [float(item['total']) for item in monthly_data]
+        monthly_counts = [item['count'] for item in monthly_data]
+        
+        monthly_sales = {
+            'months': json.dumps(months),
+            'amounts': json.dumps(monthly_amounts),
+            'counts': json.dumps(monthly_counts)
         }
+    
+    # Customer lifetime value (simplified)
+    customer_lifetime_value = total_sales
+    if sales_count > 0 and first_purchase_date:
+        today = timezone.now().date()
+        days_as_customer = (today - first_purchase_date).days if first_purchase_date else 0
+        years_as_customer = days_as_customer / 365.0
+        if years_as_customer > 0:
+            annual_value = float(total_sales) / years_as_customer
+            customer_lifetime_value = annual_value * 3  # Projected for 3 years
+    
     context = {
         'customer': customer,
         'purchase_orders': purchase_orders,
+        'sales': sales[:10] if sales else None,  # Limit to most recent 10
+        'sales_count': sales_count,
         'total_sales': total_sales,
-        'total_sales_count': total_sales_count
+        'avg_order_value': avg_order_value,
+        'first_purchase_date': first_purchase_date,
+        'last_purchase_date': last_purchase_date,
+        'purchase_frequency': purchase_frequency,
+        'credit_used': credit_used,
+        'credit_available': credit_available,
+        'credit_percent': credit_percent,
+        'payment_history': payment_history,
+        'payment_totals': payment_totals,
+        'payment_methods': payment_methods,
+        'purchased_products': purchased_products,
+        'monthly_sales': monthly_sales,
+        'customer_lifetime_value': customer_lifetime_value,
     }
     
     return render(request, 'juice_app/customer/customer_detail.html', context)

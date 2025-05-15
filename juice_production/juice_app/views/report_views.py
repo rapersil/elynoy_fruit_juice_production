@@ -1,10 +1,11 @@
+import json
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Count, F, ExpressionWrapper, DecimalField, Avg
-from django.db.models.functions import TruncMonth, TruncWeek
+from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
 from django.utils import timezone
 from datetime import timedelta
-from ..models import RawMaterial, Product, ProductionBatch, Sale, PurchaseOrder, SaleItem
+from ..models import Payment, RawMaterial, Product, ProductionBatch, Sale, PurchaseOrder, SaleItem
 
 @login_required
 def inventory_report(request):
@@ -280,12 +281,14 @@ def production_report(request):
     return render(request, 'juice_app/reports/report_production.html', context)
 
 @login_required
+@login_required
 def sales_report(request):
-    """Generate sales report."""
+    """Generate comprehensive sales report with enhanced analytics."""
     # Get date range from request or default to last 30 days
     end_date = timezone.now().date()
     start_date = request.GET.get('start_date', (end_date - timedelta(days=30)).isoformat())
     end_date_param = request.GET.get('end_date', end_date.isoformat())
+    view_type = request.GET.get('view', 'daily')  # New parameter for viewing data (daily/weekly/monthly)
     
     try:
         start_date = timezone.datetime.fromisoformat(start_date).date()
@@ -293,46 +296,164 @@ def sales_report(request):
     except (ValueError, TypeError):
         start_date = end_date - timedelta(days=30)
     
-    # Sales in date range
+    # Calculate previous period for comparison
+    period_length = (end_date - start_date).days
+    prev_end_date = start_date - timedelta(days=1)
+    prev_start_date = prev_end_date - timedelta(days=period_length)
+    
+    # Sales in current date range
     sales = Sale.objects.filter(
         sale_date__range=[start_date, end_date],
         status__in=['confirmed', 'shipped', 'delivered']
     ).order_by('-sale_date')
     
-    # Total sales amount
+    # Sales in previous period (for comparison)
+    prev_sales = Sale.objects.filter(
+        sale_date__range=[prev_start_date, prev_end_date],
+        status__in=['confirmed', 'shipped', 'delivered']
+    )
+    
+    # Total sales metrics
     total_sales = sales.aggregate(total=Sum('total_amount'))['total'] or 0
+    prev_total_sales = prev_sales.aggregate(total=Sum('total_amount'))['total'] or 0
     
-    # Sales by product
-    sales_by_product = SaleItem.objects.filter(
-        sale__sale_date__range=[start_date, end_date],
-        sale__status__in=['confirmed', 'shipped', 'delivered']
-    ).values('product__name').annotate(
-        total_quantity=Sum('quantity'),
-        total_revenue=Sum('total_price')
-    ).order_by('-total_revenue')
+    # Calculate growth percentage
+    sales_trend = 0
+    if prev_total_sales > 0:
+        sales_trend = ((total_sales - prev_total_sales) / prev_total_sales) * 100
     
-    # Sales by week
-    sales_by_week = sales.annotate(
-        week=TruncWeek('sale_date')
-    ).values('week').annotate(
-        total_sales=Sum('total_amount'),
-        order_count=Count('id')
-    ).order_by('week')
+    # Sale counts and average values
+    sale_count = sales.count()
+    avg_order_value = total_sales / sale_count if sale_count > 0 else 0
+    
+    # Payment rate calculation
+    paid_sales = sales.filter(payment_status='paid').count()
+    payment_rate = (paid_sales / sale_count) * 100 if sale_count > 0 else 0
+    
+    # Products sold
+    total_units = SaleItem.objects.filter(
+        sale__in=sales
+    ).aggregate(total=Sum('quantity'))['total'] or 0
+    
+    # Sales status breakdown
+    confirmed_revenue = sales.filter(status='confirmed').aggregate(total=Sum('total_amount'))['total'] or 0
+    shipped_revenue = sales.filter(status='shipped').aggregate(total=Sum('total_amount'))['total'] or 0
+    delivered_revenue = sales.filter(status='delivered').aggregate(total=Sum('total_amount'))['total'] or 0
+    cancelled_revenue = Sale.objects.filter(
+        sale_date__range=[start_date, end_date],
+        status='cancelled'
+    ).aggregate(total=Sum('total_amount'))['total'] or 0
+    
+    # Sales by payment method (new)
+    payment_methods = Payment.objects.filter(
+        sale__in=sales
+    ).values('payment_method').annotate(
+        count=Count('id'),
+        total=Sum('amount')
+    ).order_by('-total')
+
+    print(payment_methods)
+    
+    # Top products
+    top_products = SaleItem.objects.filter(
+        sale__in=sales
+    ).values('product__name', 'product__id').annotate(
+        quantity=Sum('quantity'),
+        revenue=Sum('total_price'),
+        avg_price=Avg('unit_price')
+    ).order_by('-revenue')[:10]
+    
+    # For chart data
+    top_product_names = [p['product__name'] for p in top_products]
+    top_product_values = [float(p['revenue']) for p in top_products]
     
     # Top customers
-    top_customers = sales.values('customer__name', 'customer_id', 'customer__id').annotate(
-    total_spend=Sum('total_amount'),
-    order_count=Count('id')
-    ).order_by('-total_spend')[:5]
+    top_customers = sales.values('customer__name', 'customer__id').annotate(
+        total_spend=Sum('total_amount'),
+        order_count=Count('id'),
+        avg_order=Avg('total_amount')
+    ).order_by('-total_spend')[:10]
+    
+    # Sales by time period for trend chart
+    date_trunc = None
+    if view_type == 'daily':
+        date_trunc = TruncDay('sale_date')
+    elif view_type == 'weekly':
+        date_trunc = TruncWeek('sale_date')
+    else:  # monthly
+        date_trunc = TruncMonth('sale_date')
+    
+    sales_by_period = sales.annotate(
+        period=date_trunc
+    ).values('period').annotate(
+        total=Sum('total_amount'),
+        count=Count('id')
+    ).order_by('period')
+    
+    # Prepare data for charts
+    trend_dates = []
+    revenue_data = []
+    order_counts = []
+    
+    for period_data in sales_by_period:
+        if view_type == 'daily':
+            trend_dates.append(period_data['period'].strftime('%d %b'))
+        elif view_type == 'weekly':
+            trend_dates.append(f"Week of {period_data['period'].strftime('%d %b')}")
+        else:
+            trend_dates.append(period_data['period'].strftime('%b %Y'))
+            
+        revenue_data.append(float(period_data['total']))
+        order_counts.append(period_data['count'])
+    
+    # New: Product profitability analysis
+    product_profitability = SaleItem.objects.filter(
+        sale__in=sales
+    ).values('product__name', 'product__production_cost').annotate(
+        quantity=Sum('quantity'),
+        revenue=Sum('total_price'),
+        avg_selling_price=Avg('unit_price')
+    ).order_by('-revenue')[:5]
+    
+    for item in product_profitability:
+        if item['product__production_cost']:
+            production_cost = item['product__production_cost']
+            item['profit_margin'] = ((item['avg_selling_price'] - production_cost) / item['avg_selling_price']) * 100
+        else:
+            item['profit_margin'] = 0
+    
+    # New: Customer retention analysis
+    repeat_customers = sales.values('customer').annotate(
+        purchase_count=Count('id')
+    ).filter(purchase_count__gt=1).count()
+    
+    repeat_customer_rate = (repeat_customers / sales.values('customer').distinct().count()) * 100 if sales.exists() else 0
     
     context = {
-        'sales': sales,
+        'sales': sales[:20],  # Limit to 20 most recent for display
         'total_sales': total_sales,
-        'sales_by_product': sales_by_product,
-        'sales_by_week': sales_by_week,
+        'sales_trend': sales_trend,
+        'sale_count': sale_count,
+        'avg_order_value': avg_order_value,
+        'payment_rate': payment_rate,
+        'total_units': total_units,
+        'trend_dates': json.dumps(trend_dates),
+        'revenue_data': json.dumps(revenue_data),
+        'order_counts': json.dumps(order_counts),
         'top_customers': top_customers,
+        'top_products': top_products,
+        'top_product_names': json.dumps(top_product_names),
+        'top_product_values': json.dumps(top_product_values),
+        'confirmed_revenue': confirmed_revenue,
+        'shipped_revenue': shipped_revenue,
+        'delivered_revenue': delivered_revenue,
+        'cancelled_revenue': cancelled_revenue,
+        'payment_methods': payment_methods,
+        'product_profitability': product_profitability,
+        'repeat_customer_rate': repeat_customer_rate,
         'start_date': start_date,
         'end_date': end_date,
+        'view_type': view_type,
     }
     
     return render(request, 'juice_app/reports/report_sales.html', context)
