@@ -17,13 +17,13 @@
   </div>
   <div>
     {% if po.status == 'draft' %}
-    <a href="{% url 'purchase_order_edit' po.id %}" class="btn btn-primary">
-      <i class="material-icons">edit</i> Edit
-    </a>
-    {% elif po.status == 'submitted' or po.status == 'partial' %}
-    <a href="{% url 'purchase_order_receive' po.id %}" class="btn btn-success">
-      <i class="material-icons">inventory</i> Receive Items
-    </a>
+      <a href="{% url 'purchase_order_receive' po.id %}" class="btn btn-success">
+        <i class="material-icons">inventory</i> Receive Items
+      </a>
+      {% elif po.status == 'partial' %}
+      <a href="{% url 'purchase_order_receive' po.id %}" class="btn btn-success">
+        <i class="material-icons">inventory</i> Receive More Items
+      </a>
     {% endif %}
     
     <a href="#" class="btn btn-outline-secondary">

@@ -25,9 +25,11 @@
     </a>
     {% endif %}
     <!-- Add this in the button group of sale_detail.html -->
+     {% if sale.status != 'draft' %}
     <a href="{% url 'payment_list' sale.id %}" class="btn btn-success">
       <i class="material-icons">payments</i> Payments
     </a>
+    {% endif %}
     
     <a href="{% url 'sale_receipt' sale.id %}" class="btn btn-outline-secondary">
       <i class="material-icons">print</i> Print

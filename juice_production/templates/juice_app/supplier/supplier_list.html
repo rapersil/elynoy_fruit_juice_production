@@ -141,30 +141,30 @@
       <div class="card-body p-0">
         {% if materials_by_supplier %}
         <div class="table-responsive">
-          <table class="table table-hover mb-0">
-            <thead>
-              <tr>
-                <th>Supplier</th>
-                <th>Materials</th>
-                <th>Total Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for supplier in materials_by_supplier %}
-              <tr>
-                <td>
-                  <a href="{% url 'customer_detail' supplier.id %}">{{ supplier.name }}</a>
-                </td>
-                <td>{{ supplier.material_count }}</td>
-                <td>GHS{{ supplier.total_value|floatformat:2 }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Supplier</th>
+                        <th>Materials</th>
+                        <th>Total Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for supplier in materials_by_supplier %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'customer_detail' supplier.id %}">{{ supplier.name }}</a>
+                        </td>
+                        <td>{{ supplier.material_count }}</td>
+                        <td>GHS{{ supplier.total_value|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
         {% else %}
         <div class="text-center py-4">
-          <p class="text-muted">No materials linked to suppliers yet</p>
+            <p class="text-muted">No materials linked to suppliers yet</p>
         </div>
         {% endif %}
       </div>

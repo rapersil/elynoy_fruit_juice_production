@@ -18,7 +18,7 @@ def generate_sale_receipt_pdf(sale, payments=None):
     # Create custom styles
     styles.add(ParagraphStyle(name='Center', alignment=1))
     styles.add(ParagraphStyle(name='Right', alignment=2))
-    styles.add(ParagraphStyle(name='Title', fontSize=16, spaceAfter=12, alignment=1))
+    styles.add(ParagraphStyle(name='ReceiptTitle', fontSize=14, spaceAfter=10, alignment=1))
     styles.add(ParagraphStyle(name='Subtitle', fontSize=14, spaceAfter=10, alignment=1))
     
     # Create the content elements

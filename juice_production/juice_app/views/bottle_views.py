@@ -80,7 +80,6 @@ def bottle_new(request):
             return redirect('bottle_list')
     else:
         form = BottleForm()
-    
     return render(request, 'juice_app/bottle/bottle_form.html', 
                  {'form': form, 'title': 'New Bottle Size'})
 

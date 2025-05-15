@@ -11,7 +11,61 @@
   </a>
 </div>
 
-<div class="card">
+<!-- Sales Summary Cards -->
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">payments</i>
+          </div>
+          <div>
+            <h6 class="text-muted mb-1">Monthly Sales</h6>
+            <h2 class="mb-0">GHS{{ total_month|floatformat:2 }}</h2>
+            <p class="text-muted mb-0">Current month</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">pending_actions</i>
+          </div>
+          <div>
+            <h6 class="text-muted mb-1">Pending Payments</h6>
+            <h2 class="mb-0">GHS{{ pending_payments|floatformat:2 }}</h2>
+            <p class="text-muted mb-0">Awaiting collection</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">receipt_long</i>
+          </div>
+          <div>
+            <h6 class="text-muted mb-1">Total Sales</h6>
+            <h2 class="mb-0">{{ sales|length }}</h2>
+            <p class="text-muted mb-0">All-time sales</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
   <div class="card-header">
     <div class="d-flex justify-content-between align-items-center">
       <h5 class="mb-0">All Sales</h5>
@@ -103,41 +157,63 @@
   </div>
 </div>
 
-<div class="row mt-4">
+<div class="row">
+  <!-- Sales Overview -->
   <div class="col-md-6">
     <div class="card">
       <div class="card-header">
         <h5 class="mb-0">
-          <i class="material-icons align-middle me-1" style="font-size: 20px;">trending_up</i>
-          Sales Summary
+          <i class="material-icons align-middle me-1" style="font-size: 20px;">insights</i>
+          Sales Overview
         </h5>
       </div>
       <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <div class="text-center mb-3">
-              <h6 class="text-muted">Total Sales (This Month)</h6>
-              <h2 class="mb-0">GHS{{ total_month|floatformat:2 }}</h2>
+        <div class="d-flex justify-content-between mb-3">
+          <div class="text-center">
+            <h6 class="text-muted mb-1">By Status</h6>
+            <div class="d-flex align-items-center">
+              <span class="badge bg-primary me-1">{{ confirmed_count|default:"0" }}</span> Confirmed
+            </div>
+            <div class="d-flex align-items-center mt-1">
+              <span class="badge bg-success me-1">{{ delivered_count|default:"0" }}</span> Delivered
+            </div>
+            <div class="d-flex align-items-center mt-1">
+              <span class="badge bg-secondary me-1">{{ draft_count|default:"0" }}</span> Draft
             </div>
           </div>
-          <div class="col-md-6">
-            <div class="text-center mb-3">
-              <h6 class="text-muted">Pending Payments</h6>
-              <h2 class="mb-0">GHS{{ pending_payments|floatformat:2 }}</h2>
+          
+          <div class="text-center">
+            <h6 class="text-muted mb-1">By Payment</h6>
+            <div class="d-flex align-items-center">
+              <span class="badge bg-success me-1">{{ paid_count|default:"0" }}</span> Paid
+            </div>
+            <div class="d-flex align-items-center mt-1">
+              <span class="badge bg-warning me-1">{{ pending_count|default:"0" }}</span> Pending
+            </div>
+            <div class="d-flex align-items-center mt-1">
+              <span class="badge bg-info me-1">{{ partial_count|default:"0" }}</span> Partial
             </div>
           </div>
         </div>
+        <a href="{% url 'sales_dashboard' %}" class="btn btn-outline-primary btn-sm w-100 mt-3">
+          <i class="material-icons align-middle" style="font-size: 16px;">dashboard</i>
+          View Detailed Dashboard
+        </a>
       </div>
     </div>
   </div>
   
+  <!-- Top Customers Section -->
   <div class="col-md-6">
     <div class="card">
-      <div class="card-header">
+      <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="material-icons align-middle me-1" style="font-size: 20px;">people</i>
           Top Customers
         </h5>
+        <a href="{% url 'top_customers_analysis' %}" class="btn btn-sm btn-outline-primary">
+          Detailed Analysis
+        </a>
       </div>
       <div class="card-body p-0">
         {% if top_customers %}
@@ -148,6 +224,7 @@
                 <th>Customer</th>
                 <th>Sales</th>
                 <th>Total Amount</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -158,6 +235,11 @@
                 </td>
                 <td>{{ customer.sale_count }}</td>
                 <td>GHS{{ customer.total_sales|floatformat:2 }}</td>
+                <td>
+                  <a href="{% url 'sale_new' %}?customer={{ customer.id }}" class="btn btn-sm btn-outline-primary">
+                    <i class="material-icons" style="font-size: 14px;">add_shopping_cart</i>
+                  </a>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -172,4 +254,41 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get filter buttons
+        const filterButtons = document.querySelectorAll('.btn-group button');
+        
+        // Add click event to each filter button
+        filterButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                // Get filter type
+                const filter = this.textContent.trim().toLowerCase();
+                
+                // Show/hide rows based on filter
+                const saleRows = document.querySelectorAll('table tbody tr');
+                saleRows.forEach(row => {
+                    if (filter === 'all') {
+                        row.style.display = '';
+                    } else {
+                        // Check if the row has the selected status
+                        const statusBadge = row.querySelector('td:nth-child(5) .badge');
+                        const statusText = statusBadge ? statusBadge.textContent.trim().toLowerCase() : '';
+                        
+                        row.style.display = (statusText === filter) ? '' : 'none';
+                    }
+                });
+            });
+        });
+    });
+</script>
 {% endblock %}

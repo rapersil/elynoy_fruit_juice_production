@@ -1,6 +1,6 @@
 {% extends 'juice_app/base.html' %}
 {% load static %}
-
+{% load custom_filters %}
 {% block title %}Receive Items for PO {{ po.po_number }} | Fruit Juice Production{% endblock %}
 
 {% block content %}
@@ -70,7 +70,7 @@
               <td>{{ item.raw_material.unit }}</td>
               <td>{{ item.quantity_ordered }}</td>
               <td>{{ item.quantity_received }}</td>
-              <td>{{ item.quantity_ordered|sub:item.quantity_received }}</td>
+              <td>{{ item.quantity_ordered|subtract:item.quantity_received }}</td>
               <td>
                 {{ form.quantity_receiving }}
                 {% if form.quantity_receiving.errors %}

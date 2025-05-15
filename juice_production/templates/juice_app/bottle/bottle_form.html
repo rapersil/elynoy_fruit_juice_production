@@ -7,8 +7,8 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h1>{% if product %}Edit Product{% else %}New Product{% endif %}</h1>
-  <a href="{% url 'product_list' %}" class="btn btn-outline-secondary">
+  <h1>{% if bottle %}Edit Bottle Size{% else %}New Bottle Size{% endif %}</h1>
+  <a href="{% url 'bottle_list' %}" class="btn btn-outline-secondary">
     <i class="material-icons">arrow_back</i> Back to List
   </a>
 </div>
@@ -21,36 +21,34 @@
     <form method="post">
       {% csrf_token %}
       
-      <h5 class="mb-3">Basic Information</h5>
-      
-      <div class="row">
+      <div class="row mb-4">
         <div class="col-md-6">
           <div class="form-group mb-3">
-            <label for="{{ form.name.id_for_label }}">Product Name <span class="text-danger">*</span></label>
-            {{ form.name }}
-            {% if form.name.errors %}
+            <label for="{{ form.size.id_for_label }}">Bottle Size <span class="text-danger">*</span></label>
+            {{ form.size }}
+            {% if form.size.errors %}
             <div class="invalid-feedback d-block">
-              {{ form.name.errors }}
+              {{ form.size.errors }}
             </div>
             {% endif %}
+            <small class="form-text text-muted">Format: 350ml, 500ml, etc.</small>
           </div>
         </div>
-         <div class="col-md-6">
-          {% if product %}
-          <!-- Display SKU as read-only when editing -->
+        
+        <div class="col-md-6">
           <div class="form-group mb-3">
-            <label>SKU</label>
-            <input type="text" class="form-control read-only-field" value="{{ sku_display }}" readonly>
-            <small class="form-text text-muted">SKU is automatically generated and cannot be changed</small>
+            <div class="form-check mt-4">
+              {{ form.is_active }}
+              <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                Active
+              </label>
+              {% if form.is_active.errors %}
+              <div class="invalid-feedback d-block">
+                {{ form.is_active.errors }}
+              </div>
+              {% endif %}
+            </div>
           </div>
-          {% else %}
-          <!-- No SKU field when creating - will be auto-generated -->
-          <div class="form-group mb-3">
-            <label>SKU</label>
-            <input type="text" class="form-control read-only-field" value="Will be generated automatically" readonly disabled>
-            <small class="form-text text-muted">SKU will be generated based on bottle size</small>
-          </div>
-          {% endif %}
         </div>
       </div>
       
@@ -62,54 +60,30 @@
           {{ form.description.errors }}
         </div>
         {% endif %}
-      </div>
-       <div class="row">
-        <div class="col-md-6">
-          <div class="form-group mb-3">
-            <label for="{{ form.bottle.id_for_label }}">Bottle Size <span class="text-danger">*</span></label>
-            {{ form.bottle }}
-            {% if form.bottle.errors %}
-            <div class="invalid-feedback d-block">
-              {{ form.bottle.errors }}
-            </div>
-            {% endif %}
-          </div>
-        </div>
-        
-        <div class="col-md-6">
-          <div class="form-group mb-3">
-            <label for="{{ form.markup_percentage.id_for_label }}">Markup Percentage (%)</label>
-            {{ form.markup_percentage }}
-            {% if form.markup_percentage.errors %}
-            <div class="invalid-feedback d-block">
-              {{ form.markup_percentage.errors }}
-            </div>
-            {% endif %}
-            <small class="form-text text-muted">Range: 0-200%</small>
-          </div>
-        </div>
+        <small class="form-text text-muted">Additional details about this bottle size (optional)</small>
       </div>
       
-      <div class="form-group mb-3">
-        <div class="form-check">
-          {{ form.is_active }}
-          <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-            Active
-          </label>
-          {% if form.is_active.errors %}
-          <div class="invalid-feedback d-block">
-            {{ form.is_active.errors }}
+      {% if products_using_bottle %}
+      <div class="alert alert-info mt-4">
+        <div class="d-flex">
+          <div class="me-3">
+            <i class="material-icons">info</i>
           </div>
-          {% endif %}
+          <div>
+            <h6 class="mb-1">Bottle in Use</h6>
+            <p class="mb-0">This bottle size is currently used by {{ products_using_bottle }} product(s). Changing the size format may affect production recipes and packaging processes.</p>
+          </div>
         </div>
       </div>
+      {% endif %}
       
       <div class="d-flex justify-content-end mt-4">
         <a href="{% url 'bottle_list' %}" class="btn btn-outline-secondary me-2">
+          <i class="material-icons align-middle me-1">cancel</i>
           Cancel
         </a>
         <button type="submit" class="btn btn-primary">
-          <i class="material-icons">save</i>
+          <i class="material-icons align-middle me-1">save</i>
           {% if bottle %}Update{% else %}Create{% endif %}
         </button>
       </div>
@@ -129,6 +103,34 @@
     document.querySelectorAll('input[type="checkbox"]').forEach(function(el) {
       el.classList.add('form-check-input');
     });
+    
+    // Add validation for bottle size format
+    const sizeInput = document.getElementById('{{ form.size.id_for_label }}');
+    if (sizeInput) {
+      sizeInput.addEventListener('input', function() {
+        const sizePattern = /^\d+ml$/;
+        if (!sizePattern.test(this.value)) {
+          this.classList.add('is-invalid');
+          
+          // Add validation message if not exists
+          if (!document.getElementById('size-error')) {
+            const errorDiv = document.createElement('div');
+            errorDiv.id = 'size-error';
+            errorDiv.className = 'invalid-feedback d-block';
+            errorDiv.textContent = 'Invalid format. Please use format like 350ml, 500ml, etc.';
+            this.parentNode.appendChild(errorDiv);
+          }
+        } else {
+          this.classList.remove('is-invalid');
+          
+          // Remove validation message if exists
+          const errorDiv = document.getElementById('size-error');
+          if (errorDiv) {
+            errorDiv.remove();
+          }
+        }
+      });
+    }
   });
 </script>
 {% endblock %}
