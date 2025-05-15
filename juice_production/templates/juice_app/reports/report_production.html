@@ -1,41 +1,81 @@
 {% extends 'juice_app/base.html' %}
 {% load static %}
 {% load custom_filters %}
-{% block title %}Production Report | Fruit Juice Production{% endblock %}
-
+{% block title %}Production Inventory Report | Fruit Juice Production{% endblock %}
 {% block extra_css %}
 <style>
-  .date-range-selector {
+  .report-card {
+    transition: all 0.2s ease;
+  }
+  
+  .report-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .inventory-status {
+    width: 12px;
+    height: 12px;
+    display: inline-block;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+  
+  .status-good {
+    background-color: var(--success);
+  }
+  
+  .status-warning {
+    background-color: var(--warning);
+  }
+  
+  .status-critical {
+    background-color: var(--danger);
+  }
+  
+  .report-filters {
     background-color: var(--color-50);
     border-radius: 0.5rem;
     padding: 1.25rem;
     margin-bottom: 1.5rem;
   }
   
-  .metric-card {
-    transition: all 0.2s ease;
+  .metric-box {
+    background-color: var(--color-50);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    text-align: center;
   }
   
-  .metric-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  .metric-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--color-800);
+    margin-bottom: 5px;
   }
   
-  .status-indicator {
-    width: 10px;
-    height: 10px;
-    display: inline-block;
-    border-radius: 50%;
-    margin-right: 6px;
+  .metric-label {
+    color: var(--color-600);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .progress-thin {
+    height: 6px;
+  }
+  
+  .tab-content {
+    padding-top: 1.5rem;
   }
 </style>
 {% endblock %}
-
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h1>Production Report</h1>
-    <p class="text-muted">Analyze production efficiency and trends over time</p>
+    <h1>Production Inventory Report</h1>
+    <p class="text-muted">Comprehensive view of current production inventory, materials, and products</p>
   </div>
   <div>
     <div class="dropdown d-inline-block me-2">
@@ -54,52 +94,32 @@
   </div>
 </div>
 
-<div class="date-range-selector">
-  <form method="get" class="mb-0">
-    <div class="row align-items-end">
-      <div class="col-md-3">
-        <div class="form-group mb-md-0 mb-3">
-          <label for="start_date" class="form-label">Start Date</label>
-          <input type="date" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" class="form-control">
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="form-group mb-md-0 mb-3">
-          <label for="end_date" class="form-label">End Date</label>
-          <input type="date" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" class="form-control">
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="form-group mb-md-0 mb-3">
-          <label for="product_filter" class="form-label">Product</label>
-          <select id="product_filter" name="product" class="form-select">
-            <option value="all">All Products</option>
-            {% for product in all_products %}
-            <option value="{{ product.id }}" {% if selected_product == product.id %}selected{% endif %}>{{ product.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-      <div class="col-md-3 text-md-end">
-        <button type="submit" class="btn btn-primary px-4">
-          <i class="material-icons align-middle me-1">date_range</i> Apply Range
-        </button>
-        <a href="{% url 'production_report' %}" class="btn btn-outline-secondary">Reset</a>
-      </div>
-    </div>
-  </form>
-</div>
-
-<!-- Production Metrics -->
+<!-- Inventory Summary Cards -->
 <div class="row mb-4">
   <div class="col-md-3 mb-3">
-    <div class="card metric-card h-100">
+    <div class="card report-card h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between">
           <div>
-            <h6 class="text-muted mb-1">Total Production</h6>
-            <h2 class="mb-0">{{ total_production }}</h2>
-            <p class="text-muted mb-0">Units produced</p>
+            <h6 class="text-muted mb-1">Raw Materials Inventory</h6>
+            <h2 class="mb-0">GHS{{ raw_materials_value|floatformat:2 }}</h2>
+            <p class="text-muted mb-0">{{ raw_materials_count }} unique materials</p>
+          </div>
+          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">inventory</i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-3">
+    <div class="card report-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="text-muted mb-1">In-Production Inventory</h6>
+            <h2 class="mb-0">GHS{{ in_production_value|floatformat:2 }}</h2>
+            <p class="text-muted mb-0">{{ active_batches_count }} active batches</p>
           </div>
           <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
             <i class="material-icons" style="font-size: 28px; color: var(--color-700);">science</i>
@@ -108,132 +128,138 @@
       </div>
     </div>
   </div>
-  
   <div class="col-md-3 mb-3">
-    <div class="card metric-card h-100">
+    <div class="card report-card h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between">
           <div>
-            <h6 class="text-muted mb-1">Production Batches</h6>
-            <h2 class="mb-0">{{ batch_count }}</h2>
-            <p class="text-muted mb-0">Total batches</p>
+            <h6 class="text-muted mb-1">Finished Products</h6>
+            <h2 class="mb-0">GHS{{ products_value|floatformat:2 }}</h2>
+            <p class="text-muted mb-0">{{ products_count }} unique products</p>
           </div>
           <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">batch_prediction</i>
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">local_drink</i>
           </div>
         </div>
       </div>
     </div>
   </div>
-  
   <div class="col-md-3 mb-3">
-    <div class="card metric-card h-100">
+    <div class="card report-card h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between">
           <div>
-            <h6 class="text-muted mb-1">Efficiency</h6>
-            <h2 class="mb-0">{{ efficiency_percentage|floatformat:1 }}%</h2>
-            <p class="text-muted mb-0">Actual vs planned</p>
+            <h6 class="text-muted mb-1">Total Inventory Value</h6>
+            <h2 class="mb-0">GHS{{ total_inventory_value|floatformat:2 }}</h2>
+            <p class="text-muted mb-0">As of {{ report_date }}</p>
           </div>
           <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">speed</i>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col-md-3 mb-3">
-    <div class="card metric-card h-100">
-      <div class="card-body">
-        <div class="d-flex justify-content-between">
-          <div>
-            <h6 class="text-muted mb-1">Quality Rate</h6>
-            <h2 class="mb-0">{{ quality_rate|floatformat:1 }}%</h2>
-            <p class="text-muted mb-0">Pass rate</p>
-          </div>
-          <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">verified</i>
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">savings</i>
           </div>
         </div>
       </div>
     </div>
   </div>
 </div>
-
-<div class="row mb-4">
-  <div class="col-md-8">
-    <div class="card mb-4">
-      <div class="card-header">
-        <h5 class="mb-0">Production Trend</h5>
-      </div>
-      <div class="card-body">
-        <div style="height: 300px;">
-          <canvas id="productionTrendChart"></canvas>
-        </div>
-      </div>
-    </div>
-    
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Production Batches</h5>
-        <a href="{% url 'production_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
-      </div>
-      <div class="card-body p-0">
-        {% if batches %}
+<!-- Inventory Analysis Tabs -->
+<div class="card mb-4">
+  <div class="card-header">
+    <ul class="nav nav-tabs card-header-tabs" id="inventoryTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">Overview</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="materials-tab" data-bs-toggle="tab" data-bs-target="#materials" type="button" role="tab" aria-controls="materials" aria-selected="false">Raw Materials</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="in-production-tab" data-bs-toggle="tab" data-bs-target="#in-production" type="button" role="tab" aria-controls="in-production" aria-selected="false">In Production</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="products-tab" data-bs-toggle="tab" data-bs-target="#products" type="button" role="tab" aria-controls="products" aria-selected="false">Finished Products</button>
+      </li>
+    </ul>
+  </div>
+  <div class="card-body">
+    <div class="tab-content" id="inventoryTabsContent">
+      <!-- Overview Tab -->
+      <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+        <div class="row">
+          <div class="col-md-8">
+            <h5 class="mb-3">Inventory Distribution</h5>
+            <div style="height: 300px;">
+              <canvas id="inventoryDistributionChart"></canvas>
+            </div>
+            <!-- Removed Inventory Value Trends section -->
+          </div>
+          <div class="col-md-4">
+            <h5 class="mb-3">Top Items by Value</h5>
+            {% if top_value_items %}
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Type</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for item in top_value_items %}
+                  <tr>
+                    <td>
+                      {% if item.type == 'raw_material' %}
+                      <a href="{% url 'raw_material_detail' item.id %}">{{ item.name }}</a>
+                      {% elif item.type == 'product' %}
+                      <a href="{% url 'product_detail' item.id %}">{{ item.name }}</a>
+                      {% else %}
+                      <a href="{% url 'production_detail' item.id %}">{{ item.name }}</a>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if item.type == 'raw_material' %}
+                      <span class="badge bg-secondary">Raw Material</span>
+                      {% elif item.type == 'in_production' %}
+                      <span class="badge bg-warning">In Production</span>
+                      {% else %}
+                      <span class="badge" style="background-color: var(--color-600);">Product</span>
+                      {% endif %}
+                    </td>
+                    <td>GHS{{ item.total_value|floatformat:2 }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+              <p class="text-muted">No items found</p>
+            </div>
+            {% endif %}
+        <h5 class="mt-4 mb-3">Low Stock Alert</h5>
+        {% if low_stock_items %}
         <div class="table-responsive">
-          <table class="table table-hover mb-0">
+          <table class="table table-hover">
             <thead>
               <tr>
-                <th>Batch Number</th>
-                <th>Product</th>
-                <th>Date</th>
-                <th>Planned</th>
-                <th>Actual</th>
-                <th>Efficiency</th>
-                <th>Status</th>
+                <th>Item</th>
+                <th>Current/Reorder</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {% for batch in batches %}
+              {% for item in low_stock_items %}
               <tr>
+                <td>{{ item.name }}</td>
+                <td class="text-danger fw-bold">{{ item.stock_quantity }}/{{ item.reorder_level }}</td>
                 <td>
-                  <a href="{% url 'production_detail' batch.id %}">{{ batch.batch_number }}</a>
-                </td>
-                <td>{{ batch.product.name }}</td>
-                <td>{{ batch.production_date }}</td>
-                <td>{{ batch.planned_quantity }}</td>
-                <td>{{ batch.actual_quantity_produced|default:"-" }}</td>
-                <td>
-                  {% if batch.actual_quantity_produced %}
-                  {% with efficiency=batch.actual_quantity_produced|floatformat:0|stringformat:"i"|add:"0"|multiply:100|divide:batch.planned_quantity|floatformat:0|stringformat:"i" %}
-                  <div class="progress" style="height: 8px; width: 80px;">
-                    <div class="progress-bar 
-                      {% if efficiency >= 95 %}bg-success
-                      {% elif efficiency >= 80 %}bg-warning
-                      {% else %}bg-danger{% endif %}" 
-                      role="progressbar" 
-                      style="width: {{ efficiency }}%;" 
-                      aria-valuenow="{{ efficiency }}" 
-                      aria-valuemin="0" 
-                      aria-valuemax="100">
-                    </div>
-                  </div>
-                  <small class="text-muted">{{ efficiency }}%</small>
-                  {% endwith %}
+                  {% if item.type == 'raw_material' %}
+                  <a href="{% url 'purchase_order_new' %}?material={{ item.id }}" class="btn btn-sm btn-outline-primary">
+                    <i class="material-icons" style="font-size: 14px;">shopping_cart</i> Order
+                  </a>
                   {% else %}
-                  <span class="text-muted">-</span>
-                  {% endif %}
-                </td>
-                <td>
-                  {% if batch.status == 'completed' %}
-                  <span class="badge bg-success">Completed</span>
-                  {% elif batch.status == 'in_progress' %}
-                  <span class="badge bg-warning">In Progress</span>
-                  {% elif batch.status == 'planned' %}
-                  <span class="badge bg-info">Planned</span>
-                  {% else %}
-                  <span class="badge bg-danger">Cancelled</span>
+                  <a href="{% url 'production_new' %}?product={{ item.id }}" class="btn btn-sm btn-outline-primary">
+                    <i class="material-icons" style="font-size: 14px;">science</i> Produce
+                  </a>
                   {% endif %}
                 </td>
               </tr>
@@ -243,48 +269,265 @@
         </div>
         {% else %}
         <div class="text-center py-4">
-          <p class="text-muted">No production batches in the selected period</p>
+          <p class="text-muted">No low stock items found</p>
         </div>
         {% endif %}
       </div>
     </div>
   </div>
   
-  <div class="col-md-4">
-    <div class="card mb-4">
-      <div class="card-header">
-        <h5 class="mb-0">Production by Product</h5>
-      </div>
-      <div class="card-body">
-        <div style="height: 300px;">
-          <canvas id="productionByProductChart"></canvas>
+  <!-- Raw Materials Tab -->
+  <div class="tab-pane fade" id="materials" role="tabpanel" aria-labelledby="materials-tab">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0">Raw Materials Inventory</h5>
+      <div class="d-flex align-items-center">
+        <div class="me-3">
+          <span class="inventory-status status-good"></span> Normal
+        </div>
+        <div class="me-3">
+          <span class="inventory-status status-warning"></span> Low
+        </div>
+        <div>
+          <span class="inventory-status status-critical"></span> Critical
         </div>
       </div>
     </div>
     
-    <div class="card">
-      <div class="card-header">
-        <h5 class="mb-0">Material Consumption</h5>
+    {% if raw_materials %}
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Current Stock</th>
+            <th>Unit</th>
+            <th>Reorder Level</th>
+            <th>Unit Cost</th>
+            <th>Total Value</th>
+            <th>Status</th>
+            <th>Last Purchase</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for material in raw_materials %}
+          <tr>
+            <td>
+              <a href="{% url 'raw_material_detail' material.id %}">{{ material.name }}</a>
+              {% if material.is_fruit %}
+              <span class="badge bg-success">Fruit</span>
+              {% endif %}
+            </td>
+            <td>{{ material.quantity_in_stock }}</td>
+            <td>{{ material.unit }}</td>
+            <td>{{ material.reorder_level }}</td>
+            <td>GHS{{ material.unit_cost|floatformat:2 }}</td>
+            <td>GHS{{ material.quantity_in_stock|multiply:material.unit_cost|floatformat:2 }}</td>
+            <td>
+              {% if material.quantity_in_stock == 0 %}
+              <span class="inventory-status status-critical"></span> Out of Stock
+              {% elif material.quantity_in_stock <= material.reorder_level %}
+              <span class="inventory-status status-warning"></span> Low
+              {% else %}
+              <span class="inventory-status status-good"></span> Normal
+              {% endif %}
+            </td>
+            <td>{{ material.last_purchase_date|default:"Never" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <i class="material-icons" style="font-size: 48px; color: var(--color-200);">inventory</i>
+      <p class="mt-3 text-muted">No raw materials found</p>
+      <a href="{% url 'raw_material_new' %}" class="btn btn-primary mt-2">Add Raw Material</a>
+    </div>
+    {% endif %}
+  </div>
+  
+  <!-- In Production Tab -->
+  <div class="tab-pane fade" id="in-production" role="tabpanel" aria-labelledby="in-production-tab">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0">In-Production Inventory</h5>
+      <a href="{% url 'production_new' %}" class="btn btn-primary btn-sm">
+        <i class="material-icons align-middle" style="font-size: 16px;">add</i> New Batch
+      </a>
+    </div>
+    
+    {% if production_batches %}
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Batch Number</th>
+            <th>Product</th>
+            <th>Planned Quantity</th>
+            <th>Production Date</th>
+            <th>Status</th>
+            <th>Materials Value</th>
+            <th>Produced By</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for batch in production_batches %}
+          <tr>
+            <td>
+              <a href="{% url 'production_detail' batch.id %}">{{ batch.batch_number }}</a>
+            </td>
+            <td>{{ batch.product.name }}</td>
+            <td>{{ batch.planned_quantity }}</td>
+            <td>{{ batch.production_date }}</td>
+            <td>
+              {% if batch.status == 'completed' %}
+              <span class="badge bg-success">Completed</span>
+              {% elif batch.status == 'in_progress' %}
+              <span class="badge bg-warning">In Progress</span>
+              {% elif batch.status == 'planned' %}
+              <span class="badge bg-info">Planned</span>
+              {% else %}
+              <span class="badge bg-danger">Cancelled</span>
+              {% endif %}
+            </td>
+            <td>GHS{{ batch.total_material_cost|floatformat:2 }}</td>
+            <td>{{ batch.produced_by|default:"Not assigned" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <i class="material-icons" style="font-size: 48px; color: var(--color-200);">science</i>
+      <p class="mt-3 text-muted">No active production batches</p>
+      <a href="{% url 'production_new' %}" class="btn btn-primary mt-2">Start Production</a>
+    </div>
+    {% endif %}
+  </div>
+  
+  <!-- Finished Products Tab -->
+  <div class="tab-pane fade" id="products" role="tabpanel" aria-labelledby="products-tab">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0">Finished Products Inventory</h5>
+      <div class="d-flex align-items-center">
+        <div class="me-3">
+          <span class="inventory-status status-good"></span> In Stock
+        </div>
+        <div class="me-3">
+          <span class="inventory-status status-warning"></span> Low Stock
+        </div>
+        <div>
+          <span class="inventory-status status-critical"></span> Out of Stock
+        </div>
       </div>
-      <div class="card-body p-0">
-        {% if material_consumption %}
+    </div>
+    
+    {% if products %}
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>SKU</th>
+            <th>Current Stock</th>
+            <th>Bottle Size</th>
+            <th>Production Cost</th>
+            <th>Selling Price</th>
+            <th>Markup</th>
+            <th>Total Value</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in products %}
+          <tr>
+            <td>
+              <a href="{% url 'product_detail' product.id %}">{{ product.name }}</a>
+            </td>
+            <td>{{ product.sku }}</td>
+            <td>{{ product.stock_quantity }}</td>
+            <td>{{ product.bottle.size }}</td>
+            <td>GHS{{ product.production_cost|floatformat:2 }}</td>
+            <td>GHS{{ product.selling_price|floatformat:2 }}</td>
+            <td>{{ product.markup_percentage }}%</td>
+            <td>GHS{{ product.stock_quantity|multiply:product.selling_price|floatformat:2 }}</td>
+            <td>
+              {% if product.stock_quantity == 0 %}
+              <span class="inventory-status status-critical"></span> Out of Stock
+              {% elif product.stock_quantity < 10 %}
+              <span class="inventory-status status-warning"></span> Low
+              {% else %}
+              <span class="inventory-status status-good"></span> In Stock
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <i class="material-icons" style="font-size: 48px; color: var(--color-200);">local_drink</i>
+      <p class="mt-3 text-muted">No products found</p>
+      <a href="{% url 'product_new' %}" class="btn btn-primary mt-2">Add Product</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+  </div>
+</div>
+<!-- Additional Analysis Section -->
+<div class="row">
+  <!-- Removed Inventory Turnover Analysis section -->
+  <div class="col-md-12 mb-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <h5 class="mb-0">Production Efficiency</h5>
+      </div>
+      <div class="card-body">
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <div class="metric-box">
+              <div class="metric-value">{{ total_production_value|floatformat:2 }}</div>
+              <div class="metric-label">Production Value (GHS)</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="metric-box">
+              <div class="metric-value">{{ production_efficiency|floatformat:1 }}%</div>
+              <div class="metric-label">Efficiency Rate</div>
+            </div>
+          </div>
+        </div>
+        <h6 class="mb-3">Top Products by Production Volume</h6>
+        {% if top_produced_products %}
         <div class="table-responsive">
-          <table class="table table-hover mb-0">
+          <table class="table table-sm">
             <thead>
               <tr>
-                <th>Material</th>
-                <th>Consumed</th>
-                <th>Waste</th>
-                <th>Cost</th>
+                <th>Product</th>
+                <th>Quantity Produced</th>
+                <th>Efficiency</th>
+                <th>Production Value</th>
               </tr>
             </thead>
             <tbody>
-              {% for material in material_consumption %}
+              {% for product in top_produced_products %}
               <tr>
-                <td>{{ material.name }}</td>
-                <td>{{ material.quantity_used }} {{ material.unit }}</td>
-                <td>{{ material.waste_quantity }} {{ material.unit }}</td>
-                <td>GHS{{ material.total_cost|floatformat:2 }}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ product.quantity_produced }}</td>
+                <td>
+                  <div class="progress progress-thin" style="width: 60px;">
+                    <div class="progress-bar 
+                      {% if product.efficiency >= 95 %}bg-success
+                      {% elif product.efficiency >= 80 %}bg-warning
+                      {% else %}bg-danger{% endif %}" 
+                      style="width: {{ product.efficiency }}%;">
+                    </div>
+                  </div>
+                  <small>{{ product.efficiency }}%</small>
+                </td>
+                <td>GHS{{ product.production_value|floatformat:2 }}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -292,7 +535,7 @@
         </div>
         {% else %}
         <div class="text-center py-4">
-          <p class="text-muted">No material consumption data available</p>
+          <p class="text-muted">No production data available</p>
         </div>
         {% endif %}
       </div>
@@ -300,7 +543,6 @@
   </div>
 </div>
 {% endblock %}
-
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -308,32 +550,25 @@
     // Get CSS variables for chart colors
     const style = getComputedStyle(document.documentElement);
     const colorPrimary = style.getPropertyValue('--color-600');
-    const colorSecondary = style.getPropertyValue('--color-300');
+    const colorSecondary = style.getPropertyValue('--color-400');
+    const colorTertiary = style.getPropertyValue('--warning');
     
-    // Production Trend Chart
-    const trendCtx = document.getElementById('productionTrendChart').getContext('2d');
-    const productionTrendChart = new Chart(trendCtx, {
-      type: 'line',
+    // Inventory Distribution Chart
+    const distributionCtx = document.getElementById('inventoryDistributionChart').getContext('2d');
+    const inventoryDistributionChart = new Chart(distributionCtx, {
+      type: 'bar',
       data: {
-        labels: {{ trend_dates|safe }},
+        labels: ['Raw Materials', 'In Production', 'Finished Products'],
         datasets: [
           {
-            label: 'Planned Production',
-            data: {{ planned_quantities|safe }},
-            borderColor: colorSecondary,
-            backgroundColor: 'rgba(200, 68, 58, 0.1)',
-            borderWidth: 2,
-            fill: false,
-            tension: 0.4
-          },
-          {
-            label: 'Actual Production',
-            data: {{ actual_quantities|safe }},
-            borderColor: colorPrimary,
-            backgroundColor: 'rgba(200, 68, 58, 0.2)',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.4
+            label: 'Inventory Value (GHS)',
+            data: [{{ raw_materials_value }}, {{ in_production_value }}, {{ products_value }}],
+            backgroundColor: [
+              colorSecondary,
+              colorTertiary,
+              colorPrimary
+            ],
+            borderWidth: 0
           }
         ]
       },
@@ -345,16 +580,7 @@
             beginAtZero: true,
             title: {
               display: true,
-              text: 'Units',
-              font: {
-                family: "'Montserrat', sans-serif"
-              }
-            }
-          },
-          x: {
-            title: {
-              display: true,
-              text: 'Date',
+              text: 'Value (GHS)',
               font: {
                 family: "'Montserrat', sans-serif"
               }
@@ -363,10 +589,12 @@
         },
         plugins: {
           legend: {
-            position: 'top',
-            labels: {
-              font: {
-                family: "'Montserrat', sans-serif"
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return 'GHS ' + context.raw.toFixed(2);
               }
             }
           }
@@ -374,48 +602,33 @@
       }
     });
     
-    // Production by Product Chart
-    const byProductCtx = document.getElementById('productionByProductChart').getContext('2d');
-    const productionByProductChart = new Chart(byProductCtx, {
-      type: 'bar',
-      data: {
-        labels: {{ product_names|safe }},
-        datasets: [
-          {
-            label: 'Units Produced',
-            data: {{ product_quantities|safe }},
-            backgroundColor: 'rgba(200, 68, 58, 0.7)',
-            borderRadius: 4
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Units Produced',
-              font: {
-                family: "'Montserrat', sans-serif"
-              }
-            }
-          },
-          x: {
-            ticks: {
-              maxRotation: 45,
-              minRotation: 45
-            }
-          }
-        },
-        plugins: {
-          legend: {
-            display: false
-          }
-        }
-      }
+    
+
+    
+    
+    // Initialize the tab functionality
+    document.querySelectorAll('#inventoryTabs button').forEach(button => {
+      button.addEventListener('click', function() {
+        // Every time a tab is clicked, resize all charts to fix any display issues
+        setTimeout(function() {
+          inventoryDistributionChart.resize();
+          inventoryTrendChart.resize();
+          turnoverChart.resize();
+        }, 50);
+      });
+    });
+    
+    // Handle automatic form submission when dropdowns change
+    document.getElementById('inventory_type').addEventListener('change', function() {
+      this.form.submit();
+    });
+    
+    document.getElementById('status_filter').addEventListener('change', function() {
+      this.form.submit();
+    });
+    
+    document.getElementById('sort_by').addEventListener('change', function() {
+      this.form.submit();
     });
   });
 </script>

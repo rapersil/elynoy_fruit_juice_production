@@ -66,7 +66,7 @@
   </div>
 </div>
 
-<div class="report-filters">
+{% comment %} <div class="report-filters">
   <form method="get" class="mb-0">
     <div class="row align-items-end">
       <div class="col-md-3">
@@ -108,7 +108,7 @@
       </div>
     </div>
   </form>
-</div>
+</div> {% endcomment %}
 
 <!-- Inventory Summary Cards -->
 <div class="row mb-4">
@@ -118,8 +118,8 @@
         <div class="d-flex justify-content-between">
           <div>
             <h6 class="text-muted mb-1">Raw Materials Inventory</h6>
-            <h2 class="mb-0">GHS{{ raw_materials_value|floatformat:2 }}</h2>
-            <p class="text-muted mb-0">{{ raw_materials_count }} unique materials</p>
+            <h2 class="mb-0">GHS{{ raw_materials|length|multiply:0|floatformat:2 }}</h2>
+            <p class="text-muted mb-0">{{ raw_materials|length }} unique materials</p>
           </div>
           <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
             <i class="material-icons" style="font-size: 28px; color: var(--color-700);">inventory</i>
@@ -135,8 +135,8 @@
         <div class="d-flex justify-content-between">
           <div>
             <h6 class="text-muted mb-1">Finished Products Inventory</h6>
-            <h2 class="mb-0">GHS{{ products_value|floatformat:2 }}</h2>
-            <p class="text-muted mb-0">{{ products_count }} unique products</p>
+            <h2 class="mb-0">GHS{{ products|length|multiply:0|floatformat:2 }}</h2>
+            <p class="text-muted mb-0">{{ products|length }} unique products</p>
           </div>
           <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
             <i class="material-icons" style="font-size: 28px; color: var(--color-700);">local_drink</i>
@@ -152,7 +152,7 @@
         <div class="d-flex justify-content-between">
           <div>
             <h6 class="text-muted mb-1">Total Inventory Value</h6>
-            <h2 class="mb-0">GHS{{ total_inventory_value|floatformat:2 }}</h2>
+            <h2 class="mb-0">GHS{{ top_materials_by_value.0.total_value|add:top_products_by_value.0.total_value|floatformat:2 }}</h2>
             <p class="text-muted mb-0">As of {{ report_date }}</p>
           </div>
           <div style="width: 48px; height: 48px; background-color: var(--color-100); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
@@ -168,7 +168,7 @@
   <div class="col-md-8">
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Inventory Details</h5>
+        <h5 class="mb-0">Raw Materials Inventory</h5>
         <div class="d-flex align-items-center">
           <div class="me-3">
             <span class="inventory-status status-good"></span> Normal
@@ -176,51 +176,36 @@
           <div class="me-3">
             <span class="inventory-status status-warning"></span> Low
           </div>
-          <div>
-            <span class="inventory-status status-critical"></span> Critical
-          </div>
         </div>
       </div>
       <div class="card-body p-0">
-        {% if inventory_items %}
+        {% if raw_materials %}
         <div class="table-responsive">
           <table class="table table-hover mb-0">
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Type</th>
                 <th>Current Stock</th>
                 <th>Reorder Level</th>
+                <th>Unit</th>
                 <th>Unit Cost</th>
                 <th>Total Value</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {% for item in inventory_items %}
-              <tr>
+              {% for material in raw_materials %}
+              <tr {% if material.needs_reorder %}class="table-warning"{% endif %}>
                 <td>
-                  {% if item.type == 'raw_material' %}
-                  <a href="{% url 'raw_material_detail' item.id %}">{{ item.name }}</a>
-                  {% else %}
-                  <a href="{% url 'product_detail' item.id %}">{{ item.name }}</a>
-                  {% endif %}
+                  <a href="{% url 'raw_material_detail' material.id %}">{{ material.name }}</a>
                 </td>
+                <td>{{ material.quantity_in_stock }}</td>
+                <td>{{ material.reorder_level }}</td>
+                <td>{{ material.unit }}</td>
+                <td>GHS{{ material.unit_cost|floatformat:2 }}</td>
+                <td>GHS{{ material.quantity_in_stock|multiply:material.unit_cost|floatformat:2 }}</td>
                 <td>
-                  {% if item.type == 'raw_material' %}
-                  <span class="badge bg-secondary">Raw Material</span>
-                  {% else %}
-                  <span class="badge" style="background-color: var(--color-600);">Product</span>
-                  {% endif %}
-                </td>
-                <td>{{ item.stock_quantity }} {{ item.unit }}</td>
-                <td>{{ item.reorder_level }} {{ item.unit }}</td>
-                <td>GHS{{ item.unit_cost|floatformat:2 }}</td>
-                <td>GHS{{ item.total_value|floatformat:2 }}</td>
-                <td>
-                  {% if item.status == 'critical' %}
-                  <span class="inventory-status status-critical"></span> Critical
-                  {% elif item.status == 'low' %}
+                  {% if material.needs_reorder %}
                   <span class="inventory-status status-warning"></span> Low
                   {% else %}
                   <span class="inventory-status status-good"></span> Normal
@@ -233,7 +218,63 @@
         </div>
         {% else %}
         <div class="text-center py-4">
-          <p class="text-muted">No inventory items match your filter criteria</p>
+          <p class="text-muted">No raw materials found</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="card mt-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Products Inventory</h5>
+        <div class="d-flex align-items-center">
+          <div class="me-3">
+            <span class="inventory-status status-good"></span> Normal
+          </div>
+          <div class="me-3">
+            <span class="inventory-status status-warning"></span> Low
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        {% if products %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>SKU</th>
+                <th>Current Stock</th>
+                <th>Selling Price</th>
+                <th>Total Value</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for product in products %}
+              <tr {% if product.stock_quantity < 10 %}class="table-warning"{% endif %}>
+                <td>
+                  <a href="{% url 'product_detail' product.id %}">{{ product.name }}</a>
+                </td>
+                <td>{{ product.sku }}</td>
+                <td>{{ product.stock_quantity }}</td>
+                <td>GHS{{ product.selling_price|floatformat:2 }}</td>
+                <td>GHS{{ product.stock_quantity|multiply:product.selling_price|floatformat:2 }}</td>
+                <td>
+                  {% if product.stock_quantity < 10 %}
+                  <span class="inventory-status status-warning"></span> Low
+                  {% else %}
+                  <span class="inventory-status status-good"></span> Normal
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No products found</p>
         </div>
         {% endif %}
       </div>
@@ -243,11 +284,29 @@
   <div class="col-md-4">
     <div class="card mb-4">
       <div class="card-header">
-        <h5 class="mb-0">Inventory Value Distribution</h5>
+        <h5 class="mb-0">Top Materials by Value</h5>
       </div>
       <div class="card-body">
         <div style="height: 250px;">
-          <canvas id="inventoryValueChart"></canvas>
+          <canvas id="topMaterialsChart"></canvas>
+        </div>
+        <div class="mt-3">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Material</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for material in top_materials_by_value %}
+              <tr>
+                <td>{{ material.name }}</td>
+                <td>GHS{{ material.total_value|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -257,7 +316,7 @@
         <h5 class="mb-0">Low Stock Items</h5>
       </div>
       <div class="card-body p-0">
-        {% if low_stock_items %}
+        {% if low_stock_materials %}
         <div class="table-responsive">
           <table class="table table-hover mb-0">
             <thead>
@@ -269,21 +328,27 @@
               </tr>
             </thead>
             <tbody>
-              {% for item in low_stock_items %}
+              {% for material in low_stock_materials %}
               <tr>
-                <td>{{ item.name }}</td>
-                <td class="text-danger fw-bold">{{ item.stock_quantity }}</td>
-                <td>{{ item.reorder_level }}</td>
+                <td>{{ material.name }}</td>
+                <td class="text-danger fw-bold">{{ material.quantity_in_stock }}</td>
+                <td>{{ material.reorder_level }}</td>
                 <td>
-                  {% if item.type == 'raw_material' %}
-                  <a href="#" class="btn btn-sm btn-outline-primary">
+                  <a href="{% url 'purchase_order_new' %}?material={{ material.id }}" class="btn btn-sm btn-outline-primary">
                     <i class="material-icons" style="font-size: 14px;">shopping_cart</i> Order
                   </a>
-                  {% else %}
-                  <a href="#" class="btn btn-sm btn-outline-primary">
+                </td>
+              </tr>
+              {% endfor %}
+              {% for product in low_stock_products %}
+              <tr>
+                <td>{{ product.name }}</td>
+                <td class="text-danger fw-bold">{{ product.stock_quantity }}</td>
+                <td>10</td>
+                <td>
+                  <a href="{% url 'production_new' %}?product={{ product.id }}" class="btn btn-sm btn-outline-primary">
                     <i class="material-icons" style="font-size: 14px;">science</i> Produce
                   </a>
-                  {% endif %}
                 </td>
               </tr>
               {% endfor %}
@@ -310,19 +375,39 @@
     const colorPrimary = style.getPropertyValue('--color-600');
     const colorSecondary = style.getPropertyValue('--color-300');
     
-    // Inventory Value Distribution Chart
-    const inventoryCtx = document.getElementById('inventoryValueChart').getContext('2d');
-    const inventoryValueChart = new Chart(inventoryCtx, {
-      type: 'doughnut',
+    // Function to generate distinct colors
+    function generateColors(numColors) {
+      const colors = [];
+      const baseHue = 10; // Red/orange hue
+      const saturation = 70;
+      
+      for (let i = 0; i < numColors; i++) {
+        // Vary the hue slightly for each segment
+        const hue = (baseHue + (i * 35)) % 360;
+        colors.push(`hsl(${hue}, ${saturation}%, 55%)`);
+      }
+      
+      return colors;
+    }
+    
+    // Top Materials by Value Chart
+    const topMaterialsCtx = document.getElementById('topMaterialsChart').getContext('2d');
+    const topMaterialsChart = new Chart(topMaterialsCtx, {
+      type: 'pie',
       data: {
-        labels: ['Raw Materials', 'Finished Products'],
+        labels: [
+          {% for material in top_materials_by_value %}
+            "{{ material.name }}",
+          {% endfor %}
+        ],
         datasets: [
           {
-            data: [{{ raw_materials_value }}, {{ products_value }}],
-            backgroundColor: [
-              colorSecondary,
-              colorPrimary
+            data: [
+              {% for material in top_materials_by_value %}
+                {{ material.total_value }},
+              {% endfor %}
             ],
+            backgroundColor: generateColors({{ top_materials_by_value|length }}),
             borderWidth: 0
           }
         ]
@@ -330,7 +415,6 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        cutout: '65%',
         plugins: {
           legend: {
             position: 'bottom',

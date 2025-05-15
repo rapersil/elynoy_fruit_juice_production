@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum, Count, F, ExpressionWrapper, DecimalField
+from django.db.models import Sum, Count, F, ExpressionWrapper, DecimalField, Avg
 from django.db.models.functions import TruncMonth, TruncWeek
 from django.utils import timezone
 from datetime import timedelta
@@ -10,7 +10,7 @@ from ..models import RawMaterial, Product, ProductionBatch, Sale, PurchaseOrder,
 def inventory_report(request):
     """Generate inventory report."""
     # Raw Materials inventory
-    raw_materials = RawMaterial.objects.all().order_by('name')
+    raw_materials = RawMaterial.objects.all().order_by('quantity_in_stock')
     low_stock_materials = raw_materials.filter(quantity_in_stock__lte=F('reorder_level'))
     
     # Products inventory
@@ -47,7 +47,7 @@ def inventory_report(request):
 
 @login_required
 def production_report(request):
-    """Generate production report."""
+    """Generate comprehensive production inventory report."""
     # Get date range from request or default to last 30 days
     end_date = timezone.now().date()
     start_date = request.GET.get('start_date', (end_date - timedelta(days=30)).isoformat())
@@ -58,6 +58,40 @@ def production_report(request):
         end_date = timezone.datetime.fromisoformat(end_date_param).date()
     except (ValueError, TypeError):
         start_date = end_date - timedelta(days=30)
+    
+    # Get filter parameters
+    inventory_type = request.GET.get('type', 'all')
+    status_filter = request.GET.get('status', 'all')
+    sort_by = request.GET.get('sort', 'value')
+    
+    # Raw Materials inventory data
+    raw_materials = RawMaterial.objects.all()
+    raw_materials_count = raw_materials.count()
+    raw_materials_value = sum(material.quantity_in_stock * material.unit_cost for material in raw_materials)
+    
+    # Low stock materials
+    low_stock_materials = raw_materials.filter(quantity_in_stock__lte=F('reorder_level'))
+    
+    # Finished Products inventory data
+    products = Product.objects.filter(is_active=True)
+    products_count = products.count()
+    products_value = sum(product.stock_quantity * product.selling_price for product in products)
+    
+    # Active production batches (in progress)
+    active_batches = ProductionBatch.objects.filter(status='in_progress')
+    active_batches_count = active_batches.count()
+    
+    # Calculate in-production value
+    in_production_value = 0
+    for batch in active_batches:
+        # Sum the cost of materials allocated to this batch
+        material_cost = batch.material_usages.aggregate(
+            total=Sum(F('planned_quantity') * F('raw_material__unit_cost'))
+        )['total'] or 0
+        in_production_value += material_cost
+    
+    # Total inventory value
+    total_inventory_value = raw_materials_value + products_value + in_production_value
     
     # Production batches in date range
     batches = ProductionBatch.objects.filter(
@@ -72,18 +106,31 @@ def production_report(request):
         batch_count=Count('id')
     ).order_by('-total_quantity')
     
-    # Production by month
-    production_by_month = batches.filter(
-        status='completed'
-    ).annotate(
-        month=TruncMonth('production_date')
-    ).values('month').annotate(
-        total_quantity=Sum('actual_quantity_produced'),
-        batch_count=Count('id')
-    ).order_by('month')
+    # Inventory turnover calculation (simplified)
+    # Get sales in the period
+    total_product_sales = SaleItem.objects.filter(
+        sale__sale_date__range=[start_date, end_date],
+        sale__status__in=['confirmed', 'shipped', 'delivered']
+    ).aggregate(
+        total_cost=Sum(F('quantity') * F('product__production_cost'))
+    )['total_cost'] or 0
     
-    # Production efficiency (actual vs planned)
-    production_efficiency = batches.filter(
+    # Calculate average inventory value over the period
+    # This should ideally use historical data points, but we'll simplify
+    avg_inventory_value = total_inventory_value / 2  # very simplified
+    
+    # Calculate inventory turnover rate
+    inventory_turnover_rate = total_product_sales / avg_inventory_value if avg_inventory_value > 0 else 0
+    
+    # Days inventory outstanding
+    days_inventory_outstanding = 365 / inventory_turnover_rate if inventory_turnover_rate > 0 else 0
+    
+    # Inventory efficiency percentage
+    ideal_turnover = 12  # An ideal of monthly turnover (industry dependent)
+    inventory_efficiency = (inventory_turnover_rate / ideal_turnover) * 100 if ideal_turnover > 0 else 0
+    
+    # Calculate production efficiency
+    production_efficiency_data = batches.filter(
         status='completed', 
         actual_quantity_produced__isnull=False
     ).aggregate(
@@ -92,17 +139,142 @@ def production_report(request):
     )
     
     efficiency_percentage = 0
-    if production_efficiency['total_planned'] and production_efficiency['total_actual']:
-        efficiency_percentage = (production_efficiency['total_actual'] / production_efficiency['total_planned']) * 100
+    if production_efficiency_data['total_planned'] and production_efficiency_data['total_actual']:
+        efficiency_percentage = (production_efficiency_data['total_actual'] / production_efficiency_data['total_planned']) * 100
+    
+    # Top items by value
+    # Combine raw materials, products, and in-production batches for a unified top items list
+    top_value_items = []
+    
+    # Add raw materials
+    for material in raw_materials:
+        value = material.quantity_in_stock * material.unit_cost
+        if value > 0:
+            top_value_items.append({
+                'id': material.id,
+                'name': material.name,
+                'type': 'raw_material',
+                'total_value': value
+            })
+    
+    # Add products
+    for product in products:
+        value = product.stock_quantity * product.selling_price
+        if value > 0:
+            top_value_items.append({
+                'id': product.id,
+                'name': product.name,
+                'type': 'product',
+                'total_value': value
+            })
+    
+    # Add in-production batches
+    for batch in active_batches:
+        material_cost = batch.material_usages.aggregate(
+            total=Sum(F('planned_quantity') * F('raw_material__unit_cost'))
+        )['total'] or 0
+        
+        if material_cost > 0:
+            top_value_items.append({
+                'id': batch.id,
+                'name': f"{batch.batch_number} ({batch.product.name})",
+                'type': 'in_production',
+                'total_value': material_cost
+            })
+    
+    # Sort and limit to top 10
+    top_value_items = sorted(top_value_items, key=lambda x: x['total_value'], reverse=True)[:10]
+    
+    # Top products by production volume
+    top_produced_products = []
+    for product_data in production_by_product[:5]:  # Top 5
+        product_name = product_data['product__name']
+        product_batches = batches.filter(
+            status='completed', 
+            product__name=product_name
+        )
+        
+        # Calculate efficiency for this product
+        product_efficiency_data = product_batches.aggregate(
+            planned=Sum('planned_quantity'),
+            actual=Sum('actual_quantity_produced')
+        )
+        
+        product_efficiency = 0
+        if product_efficiency_data['planned'] and product_efficiency_data['actual']:
+            product_efficiency = (product_efficiency_data['actual'] / product_efficiency_data['planned']) * 100
+        
+        # Calculate production value
+        production_value = product_efficiency_data['actual'] * Product.objects.get(name=product_name).production_cost if product_efficiency_data['actual'] else 0
+        
+        top_produced_products.append({
+            'name': product_name,
+            'quantity_produced': product_data['total_quantity'],
+            'efficiency': product_efficiency,
+            'production_value': production_value
+        })
+    
+   
+    
+    # Compile all low stock items
+    low_stock_items = []
+    
+    # Add low stock raw materials
+    for material in low_stock_materials:
+        low_stock_items.append({
+            'id': material.id,
+            'name': material.name,
+            'type': 'raw_material',
+            'stock_quantity': material.quantity_in_stock,
+            'reorder_level': material.reorder_level
+        })
+    
+    # Add low stock products (using arbitrary threshold for demonstration)
+    low_stock_products = products.filter(stock_quantity__lt=10)
+    for product in low_stock_products:
+        low_stock_items.append({
+            'id': product.id,
+            'name': product.name,
+            'type': 'product',
+            'stock_quantity': product.stock_quantity,
+            'reorder_level': 5  # Arbitrary threshold
+        })
+    
+    # Sort by criticality (how far below reorder level)
+    for item in low_stock_items:
+        item['criticality'] = item['reorder_level'] - item['stock_quantity']
+    
+    low_stock_items = sorted(low_stock_items, key=lambda x: x['criticality'], reverse=True)[:10]
+    
+    # Total production value
+    total_production_value = sum(product['production_value'] for product in top_produced_products)
     
     context = {
-        'batches': batches,
-        'production_by_product': production_by_product,
-        'production_by_month': production_by_month,
+        'raw_materials': raw_materials,
+        'products': products,
+        'production_batches': active_batches,
+        'raw_materials_count': raw_materials_count,
+        'raw_materials_value': raw_materials_value,
+        'products_count': products_count,
+        'products_value': products_value,
+        'active_batches_count': active_batches_count,
+        'in_production_value': in_production_value,
+        'total_inventory_value': total_inventory_value,
+        'low_stock_items': low_stock_items,
+        'top_value_items': top_value_items,
+        'inventory_turnover_rate': inventory_turnover_rate,
+        'days_inventory_outstanding': days_inventory_outstanding,
+        'inventory_efficiency': inventory_efficiency,
+        'efficiency_percentage': efficiency_percentage,
+        'production_efficiency': efficiency_percentage,
+        'top_produced_products': top_produced_products,
+        'total_production_value': total_production_value,
+        'report_date': timezone.now().date(),
         'start_date': start_date,
         'end_date': end_date,
-        'efficiency_percentage': efficiency_percentage,
-        'production_efficiency': production_efficiency,
+        'inventory_type': inventory_type,
+        'status_filter': status_filter,
+        'sort_by': sort_by,
     }
     
     return render(request, 'juice_app/reports/report_production.html', context)
