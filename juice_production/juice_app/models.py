@@ -438,7 +438,6 @@ class PurchaseOrder(models.Model):
     """Model to represent purchase orders for raw materials from suppliers."""
     STATUS_CHOICES = [
         ('draft', 'Draft'),
-        ('submitted', 'Submitted'),
         ('partial', 'Partially Received'),
         ('received', 'Fully Received'),
         ('cancelled', 'Cancelled'),
@@ -582,7 +581,7 @@ class PurchaseOrderItem(models.Model):
         if quantity_receiving > 0:
             # Update the received quantity
             self.quantity_received += quantity_receiving
-            if self.quantity_received > self.quantity_ordered:
+            if self.quantity_received == self.quantity_ordered:
                 self.quantity_received = self.quantity_ordered
                 
             # Update the raw material inventory
@@ -597,9 +596,9 @@ class PurchaseOrderItem(models.Model):
             # Update purchase order status if needed
             po = self.purchase_order
             all_items = po.items.all()
-            if all(item.quantity_received >= item.quantity_ordered for item in all_items):
+            if all(item.quantity_received == item.quantity_ordered for item in all_items):
                 po.status = 'received'
-            elif any(item.quantity_received > 0 for item in all_items):
+            elif any(item.quantity_received < item.quantity_ordered and item.quantity_received > 0 for item in all_items):
                 po.status = 'partial'
             po.save()
 

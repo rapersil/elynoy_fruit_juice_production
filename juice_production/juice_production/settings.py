@@ -183,7 +183,7 @@ APPOINTMENT_START_TIME = 9  # 9 AM
 APPOINTMENT_END_TIME = 20  # 8 PM (20:00)
 
 # Security settings
-SESSION_COOKIE_AGE = 600  # Session cookie age in seconds (10 minutes)
+SESSION_COOKIE_AGE = 6000  # Session cookie age in seconds (10 minutes)
 SESSION_SAVE_EVERY_REQUEST = True
 # Whether the session cookie should expire when the browser is closed
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True

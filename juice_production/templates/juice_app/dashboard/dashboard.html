@@ -1,5 +1,6 @@
 {% extends 'juice_app/base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Dashboard | Fruit Juice Production{% endblock %}
 
@@ -18,7 +19,7 @@
     <div class="card dashboard-panel">
       <div class="card-body text-center">
         <i class="material-icons" style="font-size: 48px; color: var(--color-600);">inventory_2</i>
-        <h2 class="mt-3" style="color: var(--color-800);">{{ total_products }}</h2>
+        <h2 class="mt-3" style="color: var(--color-800);">{{ products_count }}</h2>
         <p class="text-muted mb-0">Total Products</p>
       </div>
     </div>
@@ -87,7 +88,7 @@
                 <td>{{ item.reorder_level }}</td>
                 <td>{{ item.unit }}</td>
                 <td>
-                  <a href="#?material={{ item.id }}" class="btn btn-sm btn-outline-primary">
+                  <a href="{% url 'purchase_order_new' %}?material={{ item.id }}" class="btn btn-sm btn-outline-primary">
                     <i class="material-icons" style="font-size: 16px;">add_shopping_cart</i>
                     Order
                   </a>
@@ -118,7 +119,7 @@
         <a href="{% url 'production_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
       </div>
       <div class="card-body p-0">
-        {% if recent_batches %}
+        {% if recent_production %}
         <div class="table-responsive">
           <table class="table table-hover mb-0 recent-table">
             <thead>
@@ -131,7 +132,7 @@
               </tr>
             </thead>
             <tbody>
-              {% for batch in recent_batches %}
+              {% for batch in recent_production %}
               <tr>
                 <td>
                   <a href="{% url 'production_detail' batch.id %}">{{ batch.batch_number }}</a>
@@ -266,6 +267,7 @@
 </div>
 
 <!-- Monthly Production Chart -->
+<!-- Monthly Production Chart -->
 <div class="row">
   <div class="col-md-12 mb-4">
     <div class="card">
@@ -275,14 +277,13 @@
           Production Overview
         </h5>
         <div class="btn-group">
-          <button type="button" class="btn btn-sm btn-outline-secondary">Month</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary">Quarter</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary">Year</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary active" id="month-view">Month</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="quarter-view">Quarter</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="year-view">Year</button>
         </div>
       </div>
       <div class="card-body">
         <div style="height: 300px;">
-          <!-- Chart would be rendered here using JavaScript -->
           <canvas id="productionChart"></canvas>
         </div>
       </div>
@@ -294,29 +295,52 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+
   document.addEventListener('DOMContentLoaded', function() {
     // Get CSS variables for chart colors
     const style = getComputedStyle(document.documentElement);
     const colorPrimary = style.getPropertyValue('--color-600');
     const colorPrimaryLight = style.getPropertyValue('--color-400');
     
-    // Sample data for the production chart
+    // Data from backend
+    let monthlyData = {
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      planned: {{ monthly_planned|safe }},
+      actual: {{ monthly_production|safe }}
+    };
+    
+    let quarterlyData = {
+      labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+      planned: {{ quarterly_planned|safe }},
+      actual: {{ quarterly_production|safe }}
+    };
+    
+    let yearlyData = {
+      labels: {{ year_labels|safe }},
+      planned: {{ yearly_planned|safe }},
+      actual: {{ yearly_production|safe }}
+    };
+    
+    // Initialize with monthly data
+    let currentData = monthlyData;
+    
+    // Initialize chart
     const productionCtx = document.getElementById('productionChart').getContext('2d');
     const productionChart = new Chart(productionCtx, {
       type: 'bar',
       data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        labels: currentData.labels,
         datasets: [
           {
             label: 'Planned Production',
-            data: [1200, 1300, 1400, 1300, 1500, 1800, 2000, 2200, 2100, 1900, 1700, 1600],
+            data: currentData.planned,
             backgroundColor: 'rgba(200, 68, 58, 0.2)',
             borderColor: colorPrimary,
             borderWidth: 1
           },
           {
             label: 'Actual Production',
-            data: [1150, 1250, 1350, 1275, 1450, 1750, 1950, 2150, 2000, 1850, 1650, 1500],
+            data: currentData.actual,
             backgroundColor: 'rgba(200, 68, 58, 0.6)',
             borderColor: colorPrimary,
             borderWidth: 1
@@ -358,6 +382,40 @@
         }
       }
     });
+    
+    // Handle view button clicks
+    document.getElementById('month-view').addEventListener('click', function() {
+      updateChart(monthlyData, 'Month');
+      setActiveButton(this);
+    });
+    
+    document.getElementById('quarter-view').addEventListener('click', function() {
+      updateChart(quarterlyData, 'Quarter');
+      setActiveButton(this);
+    });
+    
+    document.getElementById('year-view').addEventListener('click', function() {
+      updateChart(yearlyData, 'Year');
+      setActiveButton(this);
+    });
+    
+    // Function to update chart data
+    function updateChart(data, xAxisLabel) {
+      productionChart.data.labels = data.labels;
+      productionChart.data.datasets[0].data = data.planned;
+      productionChart.data.datasets[1].data = data.actual;
+      productionChart.options.scales.x.title.text = xAxisLabel;
+      productionChart.update();
+    }
+    
+    // Function to set active button
+    function setActiveButton(button) {
+      document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      button.classList.add('active');
+    }
   });
+
 </script>
 {% endblock %}

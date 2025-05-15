@@ -6,7 +6,8 @@ from django.forms import inlineformset_factory
 from django.utils import timezone
 from ..models import PurchaseOrder, PurchaseOrderItem, Customer, RawMaterial
 from django import forms
-from ..forms import PurchaseOrderItemForm,PurchaseOrderForm,ReceiveItemForm
+from ..forms import PurchaseOrderItemForm, PurchaseOrderForm, ReceiveItemForm
+import uuid
 
 
 @login_required
@@ -42,8 +43,8 @@ def purchase_order_new(request):
                 today = timezone.now().strftime('%Y%m%d')
                 count = PurchaseOrder.objects.filter(
                     po_number__startswith=f'PO-{today}').count() + 1
-                po.po_number = f'PO-{today}-{count:03d}'
-                
+                unique_id = uuid.uuid4().hex[:6].upper()
+                po.po_number = f'PO-{today}-{count:03d}-{unique_id}'
                 po.save()
                 
                 # Process items formset
@@ -98,8 +99,8 @@ def purchase_order_receive(request, po_id):
     po = get_object_or_404(PurchaseOrder, id=po_id)
     
     # Only submitted or partially received POs can be received
-    if po.status not in ['submitted', 'partial']:
-        messages.error(request, 'Only submitted or partially received purchase orders can be received.')
+    if po.status not in ['draft', 'partial']:
+        messages.error(request, 'Only draft or partially received purchase orders can be received.')
         return redirect('purchase_order_detail', po_id=po.id)
     
     items = po.items.all()
@@ -130,3 +131,22 @@ def purchase_order_receive(request, po_id):
     
     return render(request, 'juice_app/purchase/purchase_receive.html', 
                  {'po': po, 'forms': forms})
+
+@login_required
+def purchase_order_submit(request, po_id):
+    """Submit a draft purchase order."""
+    po = get_object_or_404(PurchaseOrder, id=po_id)
+    
+    # Only draft POs can be submitted
+    if po.status != 'draft':
+        messages.error(request, 'Only draft purchase orders can be submitted.')
+        return redirect('purchase_order_detail', po_id=po.id)
+    
+    if request.method == 'POST':
+        with transaction.atomic():
+            po.status = 'submitted'
+            po.save()
+            messages.success(request, f'Purchase Order {po.po_number} submitted successfully.')
+            return redirect('purchase_order_detail', po_id=po.id)
+    
+    return render(request, 'juice_app/purchase/purchase_detail.html', {'po': po})

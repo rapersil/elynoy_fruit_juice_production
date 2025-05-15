@@ -229,7 +229,7 @@
         // Get the number of existing forms
         const formCount = parseInt(totalForms.value);
         
-        // Clone the first empty form
+        // Clone the last form
         const forms = formsetContainer.getElementsByClassName('item-form');
         const lastForm = forms[forms.length - 1];
         const newForm = lastForm.cloneNode(true);
@@ -259,6 +259,12 @@
               label.htmlFor = label.htmlFor.replace(/-\d+-/g, `-${formCount}-`);
             }
           });
+          
+          // Reset item total
+          const totalInput = newForm.querySelector('.item-total');
+          if (totalInput) {
+            totalInput.value = 'GHS0.00';
+          }
         });
         
         // Add the new form to the container
@@ -274,8 +280,8 @@
     
     // Calculate totals
     function calculateItemTotal(row) {
-      const quantityInput = row.querySelector('input[nameGHS="-quantity_ordered"]');
-      const priceInput = row.querySelector('input[nameGHS="-unit_price"]');
+      const quantityInput = row.querySelector('input[name$="-quantity_ordered"]');
+      const priceInput = row.querySelector('input[name$="-unit_price"]');
       const totalInput = row.querySelector('.item-total');
       
       if (quantityInput && priceInput && totalInput) {
@@ -290,8 +296,8 @@
     function calculateOrderTotal() {
       let total = 0;
       document.querySelectorAll('.item-form').forEach(function(row) {
-        const quantityInput = row.querySelector('input[nameGHS="-quantity_ordered"]');
-        const priceInput = row.querySelector('input[nameGHS="-unit_price"]');
+        const quantityInput = row.querySelector('input[name$="-quantity_ordered"]');
+        const priceInput = row.querySelector('input[name$="-unit_price"]');
         
         if (quantityInput && priceInput) {
           const quantity = parseFloat(quantityInput.value) || 0;
@@ -305,8 +311,8 @@
     
     function addCalculationListeners() {
       document.querySelectorAll('.item-form').forEach(function(row) {
-        const quantityInput = row.querySelector('input[nameGHS="-quantity_ordered"]');
-        const priceInput = row.querySelector('input[nameGHS="-unit_price"]');
+        const quantityInput = row.querySelector('input[name$="-quantity_ordered"]');
+        const priceInput = row.querySelector('input[name$="-unit_price"]');
         
         if (quantityInput) {
           quantityInput.addEventListener('input', function() {

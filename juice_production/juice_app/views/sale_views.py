@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction, models
-from django.db.models import Sum
+from django.db.models import Sum, Count
 from django.forms import inlineformset_factory
 from django.utils import timezone
 from ..models import Sale, SaleItem, Customer, Product, Payment
@@ -11,11 +11,63 @@ from django import forms
 from ..forms import SaleItemForm, SaleForm, PaymentForm
 
 
+
+
 @login_required
 def sale_list(request):
-    """Display list of sales."""
+    """Display list of sales with summary metrics and top customers."""
+    # Get all sales
     sales = Sale.objects.all().order_by('-sale_date')
-    return render(request, 'juice_app/sale/sale_list.html', {'sales': sales})
+    
+    # Calculate sales metrics for the current month
+    today = timezone.now().date()
+    first_day_of_month = today.replace(day=1)
+    
+    # Total sales for current month
+    total_month = Sale.objects.filter(
+        sale_date__gte=first_day_of_month,
+        sale_date__lte=today,
+        status__in=['confirmed', 'shipped', 'delivered']
+    ).aggregate(total=Sum('total_amount'))['total'] or 0
+    
+    # Pending payments (all unpaid or partially paid sales)
+    pending_payments = Sale.objects.filter(
+        payment_status__in=['pending', 'partial']
+    ).aggregate(total=Sum('total_amount'))['total'] or 0
+    
+    # Get top customers (by total sales amount)
+    top_customers = Customer.objects.filter(
+        is_buyer=True, 
+        sale__status__in=['confirmed', 'shipped', 'delivered']
+    ).annotate(
+        total_sales=Sum('sale__total_amount'),
+        sale_count=Count('sale')
+    ).filter(total_sales__gt=0).order_by('-total_sales')[:5]
+    
+    # Count sales by status
+    confirmed_count = sales.filter(status='confirmed').count()
+    delivered_count = sales.filter(status='delivered').count()
+    draft_count = sales.filter(status='draft').count()
+    
+    # Count sales by payment status
+    paid_count = sales.filter(payment_status='paid').count()
+    pending_count = sales.filter(payment_status='pending').count()
+    partial_count = sales.filter(payment_status='partial').count()
+    
+    context = {
+        'sales': sales,
+        'total_month': total_month,
+        'pending_payments': pending_payments,
+        'top_customers': top_customers,
+        'confirmed_count': confirmed_count,
+        'delivered_count': delivered_count,
+        'draft_count': draft_count,
+        'paid_count': paid_count,
+        'pending_count': pending_count,
+        'partial_count': partial_count
+    }
+    
+    return render(request, 'juice_app/sale/sale_list.html', context)
 
 @login_required
 def sale_detail(request, sale_id):
@@ -167,8 +219,16 @@ def sale_confirm(request, sale_id):
             
             messages.success(request, f'Sale {sale.invoice_number} confirmed successfully.')
             return redirect('sale_detail', sale_id=sale.id)
+
+    context = {
+        'sale': sale,
+        'insufficient_stock': insufficient_stock,
+        'items': sale.items.all()
+    }
     
-    return render(request, 'juice_app/sale/sale_confirm.html', {'sale': sale})
+    return render(request, 'juice_app/sale/sale_confirm.html', context)
+    
+    
 
 
 

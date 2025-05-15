@@ -1,7 +1,49 @@
 {% extends 'juice_app/base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Customers | Fruit Juice Production{% endblock %}
+
+{% block extra_css %}
+<style>
+  .metric-card {
+    transition: all 0.2s ease;
+    height: 100%;
+  }
+  .metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  .metric-icon {
+    width: 48px;
+    height: 48px;
+    background-color: var(--color-100);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+  }
+  .filter-section {
+    background-color: var(--color-50);
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  .customer-rank {
+    width: 24px;
+    height: 24px;
+    background-color: var(--color-600);
+    color: white;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 8px;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -11,17 +53,179 @@
   </a>
 </div>
 
+<!-- Filter Section -->
+<div class="filter-section">
+  <form method="get" class="row g-3">
+    <div class="col-md-4">
+      <label for="type-filter" class="form-label">Customer Type</label>
+      <select id="type-filter" name="type" class="form-select">
+        <option value="all" {% if filter_type == 'all' %}selected{% endif %}>All Customers</option>
+        <option value="buyers" {% if filter_type == 'buyers' %}selected{% endif %}>Buyers Only</option>
+        <option value="suppliers" {% if filter_type == 'suppliers' %}selected{% endif %}>Suppliers Only</option>
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label for="status-filter" class="form-label">Status</label>
+      <select id="status-filter" name="status" class="form-select">
+        <option value="all" {% if filter_status == 'all' %}selected{% endif %}>All Status</option>
+        <option value="active" {% if filter_status == 'active' %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if filter_status == 'inactive' %}selected{% endif %}>Inactive</option>
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label for="search-input" class="form-label">Search</label>
+      <div class="input-group">
+        <input type="text" id="search-input" name="search" class="form-control" placeholder="Search customers..." value="{{ search_query }}">
+        <button class="btn btn-primary" type="submit">
+          <i class="material-icons align-middle">search</i>
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Customer Metrics -->
+<div class="row mb-4">
+  <div class="col-md-3 mb-3">
+    <div class="card metric-card">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+          <div class="metric-icon">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">people</i>
+          </div>
+          <div>
+            <div class="text-muted">{{ total_label }}</div>
+            <h3 class="mb-0">{{ total_customers }}</h3>
+          </div>
+        </div>
+        {% if filter_type == 'all' %}
+        <div class="d-flex justify-content-between align-items-center">
+          <div><span class="badge bg-primary">{{ buyers_count }} Buyers</span></div>
+          <div><span class="badge" style="background-color: var(--color-600);">{{ suppliers_count }} Suppliers</span></div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="card metric-card">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+          <div class="metric-icon">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">payments</i>
+          </div>
+          <div>
+            {% if stats_type == 'sales' %}
+            <div class="text-muted">Sales This Month</div>
+            <h3 class="mb-0">GHS{{ total_sales_amount|floatformat:2 }}</h3>
+            {% else %}
+            <div class="text-muted">Purchases This Month</div>
+            <h3 class="mb-0">GHS{{ total_purchase_amount|floatformat:2 }}</h3>
+            {% endif %}
+          </div>
+        </div>
+        <div>
+          {% if stats_type == 'sales' %}
+          {% if sales_growth > 0 %}
+          <span class="text-success">
+            <i class="material-icons align-middle" style="font-size: 16px;">trending_up</i>
+            {{ sales_growth|floatformat:1 }}% from last month
+          </span>
+          {% elif sales_growth < 0 %}
+          <span class="text-danger">
+            <i class="material-icons align-middle" style="font-size: 16px;">trending_down</i>
+            {{ sales_growth|abs|floatformat:1 }}% from last month
+          </span>
+          {% else %}
+          <span class="text-muted">
+            <i class="material-icons align-middle" style="font-size: 16px;">trending_flat</i>
+            No change from last month
+          </span>
+          {% endif %}
+          {% else %}
+          {% if purchase_growth > 0 %}
+          <span class="text-success">
+            <i class="material-icons align-middle" style="font-size: 16px;">trending_up</i>
+            {{ purchase_growth|floatformat:1 }}% from last month
+          </span>
+          {% elif purchase_growth < 0 %}
+          <span class="text-danger">
+            <i class="material-icons align-middle" style="font-size: 16px;">trending_down</i>
+            {{ purchase_growth|abs|floatformat:1 }}% from last month
+          </span>
+          {% else %}
+          <span class="text-muted">
+            <i class="material-icons align-middle" style="font-size: 16px;">trending_flat</i>
+            No change from last month
+          </span>
+          {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="card metric-card">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+          <div class="metric-icon">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">verified_user</i>
+          </div>
+          <div>
+            <div class="text-muted">{{ active_label }}</div>
+            <h3 class="mb-0">{{ active_customers }}</h3>
+          </div>
+        </div>
+        <div>
+          <div class="progress" style="height: 8px;">
+            <div class="progress-bar" role="progressbar" 
+                 style="width: {{ active_customers|multiply:100|divide:total_customers }}%; background-color: var(--color-600);" 
+                 aria-valuenow="{{ active_customers|multiply:100|divide:total_customers }}" 
+                 aria-valuemin="0" 
+                 aria-valuemax="100">
+            </div>
+          </div>
+          <div class="text-end mt-1">
+            <small class="text-muted">{{ active_customers|multiply:100|divide:total_customers|floatformat:1 }}% of total</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-3">
+    <div class="card metric-card">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+          <div class="metric-icon">
+            <i class="material-icons" style="font-size: 28px; color: var(--color-700);">description</i>
+          </div>
+          <div>
+            <div class="text-muted">Quick Actions</div>
+          </div>
+        </div>
+        <div class="d-grid gap-2">
+          <a href="{% url 'customer_new' %}" class="btn btn-sm btn-outline-primary">
+            <i class="material-icons align-middle" style="font-size: 16px;">person_add</i>
+            New Customer
+          </a>
+          <a href="{% url 'sale_new' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="material-icons align-middle" style="font-size: 16px;">shopping_cart</i>
+            Create Sale
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="card">
   <div class="card-header">
     <div class="d-flex justify-content-between align-items-center">
       <h5 class="mb-0">All Customers</h5>
-      <div>
-        <div class="btn-group" role="group">
-          <button type="button" class="btn btn-sm btn-outline-secondary active">All</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary">Active</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary">Inactive</button>
-        </div>
-      </div>
+      <span class="badge bg-primary">{{ customers|length }} Total</span>
     </div>
   </div>
   <div class="card-body p-0">
@@ -70,6 +274,11 @@
                 <a href="{% url 'customer_edit' customer.id %}" class="btn btn-sm btn-outline-secondary">
                   <i class="material-icons" style="font-size: 16px;">edit</i>
                 </a>
+                {% if customer.is_buyer %}
+                <a href="{% url 'sale_new' %}?customer={{ customer.id }}" class="btn btn-sm btn-outline-success">
+                  <i class="material-icons" style="font-size: 16px;">shopping_cart</i>
+                </a>
+                {% endif %}
               </div>
             </td>
           </tr>
@@ -90,27 +299,75 @@
 <div class="row mt-4">
   <div class="col-md-6">
     <div class="card">
-      <div class="card-header">
+      <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
-          <i class="material-icons align-middle me-1" style="font-size: 20px;">trending_up</i>
-          Sales Summary
+          <i class="material-icons align-middle me-1" style="font-size: 20px;">stars</i>
+          {% if stats_type == 'sales' %}Top Customers{% else %}Top Suppliers{% endif %} (Last 90 Days)
         </h5>
+        <a href="{% url 'top_customers_analysis' %}" class="btn btn-sm btn-outline-primary">Detailed Analysis</a>
       </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <div class="text-center mb-3">
-              <h6 class="text-muted">Total Customers</h6>
-              <h2 class="mb-0">{{ total_customers }}</h2>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="text-center mb-3">
-              <h6 class="text-muted">Total Sales</h6>
-              <h2 class="mb-0">GHS{{ total_sales|floatformat:2 }}</h2>
-            </div>
-          </div>
+      <div class="card-body p-0">
+        {% if stats_type == 'sales' %}
+        {% if top_customers %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Orders</th>
+                <th>Total Spent</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for customer in top_customers %}
+              <tr>
+                <td>
+                  <span class="customer-rank">{{ forloop.counter }}</span>
+                  <a href="{% url 'customer_detail' customer.customer__id %}">{{ customer.customer__name }}</a>
+                </td>
+                <td>{{ customer.sale_count }}</td>
+                <td>GHS{{ customer.total_sales|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No sales data available</p>
+        </div>
+        {% endif %}
+        {% else %}
+        {% if top_suppliers %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Supplier</th>
+                <th>Orders</th>
+                <th>Total Purchased</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for supplier in top_suppliers %}
+              <tr>
+                <td>
+                  <span class="customer-rank">{{ forloop.counter }}</span>
+                  <a href="{% url 'customer_detail' supplier.supplier__id %}">{{ supplier.supplier__name }}</a>
+                </td>
+                <td>{{ supplier.po_count }}</td>
+                <td>GHS{{ supplier.total_purchases|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No purchase data available</p>
+        </div>
+        {% endif %}
+        {% endif %}
       </div>
     </div>
   </div>
@@ -119,37 +376,35 @@
     <div class="card">
       <div class="card-header">
         <h5 class="mb-0">
-          <i class="material-icons align-middle me-1" style="font-size: 20px;">stars</i>
-          Top Customers
+          <i class="material-icons align-middle me-1" style="font-size: 20px;">history</i>
+          {% if stats_type == 'sales' %}Recent Customer Activity{% else %}Recent Supplier Activity{% endif %}
         </h5>
       </div>
       <div class="card-body p-0">
-        {% if top_customers %}
+        {% if stats_type == 'sales' %}
+        {% if recent_customers %}
         <div class="table-responsive">
           <table class="table table-hover mb-0">
             <thead>
               <tr>
                 <th>Customer</th>
-                <th>Total Sales</th>
                 <th>Last Purchase</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {% for customer in top_customers %}
+              {% for customer in recent_customers %}
               <tr>
                 <td>
-                  {% if customer %}
-                    <a href="{% url 'customer_detail' customer.id %}" class="btn btn-outline-secondary me-2">
-                          Cancel
-                      </a>
-                  {% else %}
-                      <a href="{% url 'customer_list' %}" class="btn btn-outline-secondary me-2">
-                          Cancel
-                      </a>
-                  {% endif %}
+                  <a href="{% url 'customer_detail' customer.customer__id %}">{{ customer.customer__name }}</a>
                 </td>
-                <td>GHS{{ customer.total_sales|floatformat:2 }}</td>
-                <td>{{ customer.last_purchase_date }}</td>
+                <td>{{ customer.last_purchase }}</td>
+                <td>
+                  <a href="{% url 'sale_new' %}?customer={{ customer.customer__id }}" class="btn btn-sm btn-outline-primary">
+                    <i class="material-icons" style="font-size: 16px;">shopping_cart</i>
+                    New Sale
+                  </a>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -157,51 +412,59 @@
         </div>
         {% else %}
         <div class="text-center py-4">
-          <p class="text-muted">No sales data available yet</p>
+          <p class="text-muted">No recent activity</p>
         </div>
+        {% endif %}
+        {% else %}
+        {% if recent_suppliers %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Supplier</th>
+                <th>Last Purchase</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for supplier in recent_suppliers %}
+              <tr>
+                <td>
+                  <a href="{% url 'customer_detail' supplier.supplier__id %}">{{ supplier.supplier__name }}</a>
+                </td>
+                <td>{{ supplier.last_purchase }}</td>
+                <td>
+                  <a href="{% url 'purchase_order_new' %}?supplier={{ supplier.supplier__id }}" class="btn btn-sm btn-outline-primary">
+                    <i class="material-icons" style="font-size: 16px;">add_shopping_cart</i>
+                    New Purchase
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted">No recent activity</p>
+        </div>
+        {% endif %}
         {% endif %}
       </div>
     </div>
   </div>
 </div>
 {% endblock %}
+
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Get all customer rows
-        const customerRows = document.querySelectorAll('table tbody tr');
-        
-        // Get filter buttons
-        const filterButtons = document.querySelectorAll('.btn-group button');
-        
-        // Add click event to each filter button
-        filterButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                // Remove active class from all buttons
-                filterButtons.forEach(btn => btn.classList.remove('active'));
-                
-                // Add active class to clicked button
-                this.classList.add('active');
-                
-                // Get filter type
-                const filter = this.textContent.trim().toLowerCase();
-                
-                // Show/hide rows based on filter
-                customerRows.forEach(row => {
-                    if (filter === 'all') {
-                        row.style.display = '';
-                    } else if (filter === 'active') {
-                        // Check if the row has an "Active" badge
-                        const hasActiveBadge = row.querySelector('.badge.bg-success');
-                        row.style.display = hasActiveBadge ? '' : 'none';
-                    } else if (filter === 'inactive') {
-                        // Check if the row has an "Inactive" badge
-                        const hasInactiveBadge = row.querySelector('.badge.bg-secondary');
-                        row.style.display = hasInactiveBadge ? '' : 'none';
-                    }
-                });
-            });
-        });
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('type-filter').addEventListener('change', function() {
+      this.form.submit();
     });
+    document.getElementById('status-filter').addEventListener('change', function() {
+      this.form.submit();
+    });
+  });
 </script>
 {% endblock %}

@@ -1,5 +1,6 @@
 {% extends 'juice_app/base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Purchase Orders | Fruit Juice Production{% endblock %}
 
@@ -63,12 +64,12 @@
               {% endif %}
             </td>
             <td>
-              {% if po.payment_status == 'pending' %}
-              <span class="badge bg-warning">Pending</span>
-              {% elif po.payment_status == 'partial' %}
-              <span class="badge bg-info">Partial</span>
-              {% elif po.payment_status == 'paid' %}
-              <span class="badge bg-success">Paid</span>
+              {% if po.status == 'draft' %}
+              <span class="badge bg-secondary">Draft</span>
+              {% elif po.status == 'partial' %}
+              <span class="badge bg-warning">Partially Received</span>
+              {% elif po.status == 'received' %}
+              <span class="badge bg-success">Received</span>
               {% else %}
               <span class="badge bg-danger">Cancelled</span>
               {% endif %}

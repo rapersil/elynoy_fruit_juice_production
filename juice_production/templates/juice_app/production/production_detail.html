@@ -21,9 +21,11 @@
     <a href="{% url 'production_edit' batch.id %}" class="btn btn-primary">
       <i class="material-icons">edit</i> Edit
     </a>
-    <a href="{% url 'production_start' batch.id %}" class="btn btn-success">
-      <i class="material-icons">play_arrow</i> Start Production
-    </a>
+      {% if batch.status == 'planned' %}
+      <a href="{% url 'production_start' batch.id %}" class="btn btn-success">
+        <i class="material-icons">play_arrow</i> Start Production
+      </a>
+      {% endif %}
     {% elif batch.status == 'in_progress' and batch.produced_by == request.user or request.user.profile.role in 'admin,superadmin'|split:',' %}
     <a href="{% url 'production_complete' batch.id %}" class="btn btn-info">
       <i class="material-icons">task_alt</i> Complete
@@ -227,10 +229,10 @@
           <div class="col-md-6">
             <div class="text-center mb-3">
               <h6 class="text-muted">Total Material Cost</h6>
-              <h2 class="mb-0">${{ batch.total_material_cost|floatformat:2 }}</h2>
+              <h2 class="mb-0">GHS{{ batch.total_material_cost|floatformat:2 }}</h2>
               <p>
                 {% if batch.actual_quantity_produced %}
-                Cost per unit: ${{ batch.total_material_cost|divide:batch.actual_quantity_produced|floatformat:2 }}
+                Cost per unit: GHS{{ batch.total_material_cost|divide:batch.actual_quantity_produced|floatformat:2 }}
                 {% else %}
                 -
                 {% endif %}
